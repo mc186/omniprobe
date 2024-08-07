@@ -1,0 +1,79 @@
+/******************************************************************************
+Copyright (c) 2021 Advanced Micro Devices, Inc. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*******************************************************************************/
+#pragma once
+#undef NDEBUG
+#include <assert.h>
+#include <cxxabi.h>
+#include <dirent.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/syscall.h>   /* For SYS_xxx definitions */
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <limits.h>
+
+#include <atomic>
+#include <chrono>
+#include <iostream>
+#include <fstream>
+#include <list>
+#include <map>
+#include <sstream>
+#include <string>
+#include <thread>
+#include <vector>
+#include <thread>
+#include <mutex>
+#include <utility>
+#include <shared_mutex>
+#include <filesystem>
+#include <ios>
+#include <ctime>
+#include <algorithm>
+#include <regex>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+#include <hsa.h>
+#include <hsa_ven_amd_aqlprofile.h>
+#include <hsa_ven_amd_loader.h>
+#include "rocprofiler/rocprofiler.h"
+
+
+using namespace std;
+
+
+class signalPool{
+public:
+    signalPool(int initialSize = 8);
+    ~signalPool();
+    hsa_signal_t checkout();
+    void checkin(hsa_signal_t sig);
+private:
+    std::vector<hsa_signal_t> available_;
+    std::vector<hsa_signal_t> in_use_;
+    std::mutex mutex_;
+};
+
