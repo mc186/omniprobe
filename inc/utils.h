@@ -62,7 +62,17 @@ THE SOFTWARE.
 #include "rocprofiler/rocprofiler.h"
 
 
+
 using namespace std;
+
+#define CHECK_STATUS(msg, status) do {                                                             \
+  if ((status) != HSA_STATUS_SUCCESS) {                                                            \
+    const char* emsg = 0;                                                                          \
+    hsa_status_string(status, &emsg);                                                              \
+    printf("%s: %s\n", msg, emsg ? emsg : "<unknown error>");                                      \
+    abort();                                                                                       \
+  }                                                                                                \
+} while (0)
 
 
 class signalPool{
@@ -77,3 +87,13 @@ private:
     std::mutex mutex_;
 };
 
+class coCache{
+public:
+    coCache(std::string& directory);
+    ~coCache();
+    hsa_executable_t getInstrumented(hsa_executable_t, std::string name);
+private:
+    std::map<std::string,hsa_executable_t> cache_;
+    std::vector<std::string> filelist_;
+    std::mutex mutex_;
+};

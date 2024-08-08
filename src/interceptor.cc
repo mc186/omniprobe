@@ -122,6 +122,7 @@ decltype(hsa_queue_create)* hsa_queue_create_fn;
 decltype(hsa_queue_destroy)* hsa_queue_destroy_fn;
 decltype(hsa_amd_queue_intercept_create)* hsa_amd_queue_intercept_create_fn;
 decltype(hsa_amd_queue_intercept_register)* hsa_amd_queue_intercept_register_fn;
+decltype(hsa_executable_symbol_get_info)* hsa_executable_symbol_get_info_fn;
 
 void hsaInterceptor::saveHsaApi() {
 
@@ -130,6 +131,7 @@ void hsaInterceptor::saveHsaApi() {
   hsa_queue_destroy_fn = apiTable_->core_->hsa_queue_destroy_fn;
   hsa_amd_queue_intercept_create_fn = apiTable_->amd_ext_->hsa_amd_queue_intercept_create_fn;
   hsa_amd_queue_intercept_register_fn = apiTable_->amd_ext_->hsa_amd_queue_intercept_register_fn;
+  hsa_executable_symbol_get_info_fn = apiTable_->core_->hsa_executable_symbol_get_info_fn;;
 }
 
 void hsaInterceptor::restoreHsaApi() {
@@ -138,6 +140,7 @@ void hsaInterceptor::restoreHsaApi() {
   apiTable_->core_->hsa_queue_destroy_fn = hsa_queue_destroy_fn;
   apiTable_->amd_ext_->hsa_amd_queue_intercept_create_fn = hsa_amd_queue_intercept_create_fn;
   apiTable_->amd_ext_->hsa_amd_queue_intercept_register_fn = hsa_amd_queue_intercept_register_fn;
+  apiTable_->core_->hsa_executable_symbol_get_info_fn = hsa_executable_symbol_get_info_fn;
 
 }
 
@@ -212,13 +215,18 @@ void hsaInterceptor::doPackets(hsa_queue_t *queue, const packet_t *packet, uint6
 
 void hsaInterceptor::addQueue(hsa_queue_t *queue, hsa_agent_t agent)
 {
-    //debug_out(cout, "ROCMHOOK: addQueue 0x", hex, queue->doorbell_signal.handle, " tid: ", gettid());
+    // This call results in completion signals having start and stop timestamps on dispatches 
+    auto result = (*(apiTable_->amd_ext_->hsa_amd_profiling_set_profiler_enabled_fn))(queue, true);
+    assert(result == HSA_STATUS_SUCCESS && "Couldn't enable queue for profiling");
+    
     lock_guard<mutex> lock(mm_mutex_);
 
-    auto result = (*(apiTable_->amd_ext_->hsa_amd_profiling_set_profiler_enabled_fn))(queue, true);
-
-    assert(result == HSA_STATUS_SUCCESS && "Couldn't enable queue for profiling");
-
+    queues_[queue] = agent;
+    auto it = isas_.find(agent);
+    if (it == isas_.end())
+    {
+        // Query isa info and store in isas_
+    }
 }
 
 
@@ -260,6 +268,44 @@ hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
     try
     {
         result = (*hsa_queue_destroy_fn)(queue);
+    }
+    catch(const exception& e)
+    {
+        cerr << e.what();
+    }
+    return result;
+}
+ 
+hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute, void *data)
+{
+    hsa_status_t result = HSA_STATUS_SUCCESS;
+    try
+    {
+        result = (*hsa_executable_symbol_get_info_fn)(symbol, attribute, data);
+        if (attribute == HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT)
+        {
+            uint32_t length;
+            if ((*hsa_executable_symbol_get_info_fn)(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH,&length) == HSA_STATUS_SUCCESS)
+            {
+                char *name = reinterpret_cast<char *>(malloc(length + 1));
+                if (name)
+                {
+                    name[length] = '\0';
+                    if ((*hsa_executable_symbol_get_info_fn)(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name) == HSA_STATUS_SUCCESS)
+                    {
+                       uint64_t kernelObject = *reinterpret_cast<uint64_t *>(data);
+                       string strName = name;
+                       cout << "symbol_get_info kernel name: " << strName << endl;
+                       //getInstance()->addSymbol(symbol, kernelObject, strName);
+                    }
+                    else
+                    {
+                        std::cout << "KERNEL HAS NO NAME!!!\n";
+                    }
+                }
+                free(reinterpret_cast<void *>(name));
+            }
+        }
     }
     catch(const exception& e)
     {
