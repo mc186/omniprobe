@@ -82,9 +82,11 @@ void PR(const T& arg, const TS&... args) { LOG << arg << " "; PR(args...); }
 const char *DBG = ">>>>>>>>";
 const char *INTERCEPTOR_MSG = "[hsaInterceptor] ";
 
+std::mutex hsaInterceptor::singleton_mutex_;
+
 hsaInterceptor * hsaInterceptor::getInstance(HsaApiTable *table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names)
 {
-    const lock_guard<mutex> lock(mutex_);
+    const lock_guard<mutex> lock(singleton_mutex_);
     if (!singleton_)
     {
         if (table != NULL)
@@ -99,6 +101,7 @@ hsaInterceptor * hsaInterceptor::getInstance(HsaApiTable *table, uint64_t runtim
     return singleton_;
 }
 
+
 void hsaInterceptor::OnSubmitPackets(const void* in_packets, uint64_t count,
     uint64_t user_que_idx, void* data, hsa_amd_queue_intercept_packet_writer writer)
 {
@@ -111,11 +114,56 @@ void hsaInterceptor::OnSubmitPackets(const void* in_packets, uint64_t count,
     }
 }
 
+bool hsaInterceptor::shuttingdown()
+{
+    return shutting_down_.load();
+}
 
-hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) {
+void hsaInterceptor::shutdown()
+{
+    shutting_down_.store(true);
+}
+
+
+void signal_runner()
+{
+    hsaInterceptor *me = hsaInterceptor::getInstance();
+    while (!me->shuttingdown())
+    {
+        cout << "Not shutting down in signal_runner\n";
+        sleep(1);
+    }
+    cout << "signal_runner is shutting down\n";
+}
+
+
+void hsaInterceptor::cleanup()
+{
+    if(singleton_)
+    {
+        delete singleton_;
+        singleton_ = NULL;
+    }
+}
+
+
+hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : signal_runner_(signal_runner) {
     apiTable_ = table;
+    for (int i = 0; i < SIGPOOL_INCREMENT; i++)
+    {
+        hsa_signal_t curr_sig;
+        CHECK_STATUS("Signal creation error at startup",apiTable_->core_->hsa_signal_create_fn(1,0,NULL,&curr_sig));
+        sig_pool_.emplace_back(curr_sig);
+    }
 }
 hsaInterceptor::~hsaInterceptor() {
+    shutting_down_.store(true);
+    signal_runner_.join();
+    // Join signal processing thread here
+    lock_guard<std::mutex> lock(mutex_);
+    for (auto sig : sig_pool_)
+        CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
+    restoreHsaApi();
 }
 
 decltype(hsa_queue_create)* hsa_queue_create_fn;
@@ -192,6 +240,16 @@ string hsaInterceptor::packetToText(const packet_t *packet)
     return buff.str();
 }
 
+hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue)
+{
+    hsa_kernel_dispatch_packet_t *dispatch = new hsa_kernel_dispatch_packet_t;
+    *dispatch = *packet;
+    cout << "Fixed up a packet\n";
+    if (dispatch->completion_signal.handle)
+        cout << "Packet has a completion handle: 0x" << std::hex << dispatch->completion_signal.handle << std::dec << std::endl;
+    return dispatch;
+}
+
 /*
     This is the packet handler registered with the intercept queue created by hsa_queue_create(...)
     In this method we inspect every packet, writing every non-dispatch packet to the destination queue.
@@ -204,7 +262,23 @@ string hsaInterceptor::packetToText(const packet_t *packet)
 void hsaInterceptor::doPackets(hsa_queue_t *queue, const packet_t *packet, uint64_t count, hsa_amd_queue_intercept_packet_writer writer) {
     try {
 
-       writer(packet, count); 
+        for(uint64_t i = 0; i < count; i++)
+        {
+            if (getHeaderType(&packet[i]) == HSA_PACKET_TYPE_KERNEL_DISPATCH)
+            {
+                hsa_kernel_dispatch_packet_t *dispatch = fixupPacket(reinterpret_cast<const hsa_kernel_dispatch_packet_t *>(&packet[i]), queue);
+                if (dispatch)
+                {
+                    writer(dispatch, 1);
+                    delete dispatch;
+                }
+                else
+                    writer(&packet[i],1);
+            }
+            else
+                writer(&packet[i],1);
+        }
+        writer(packet, count); 
 
     } catch(const exception& e) {
         debug_out(cerr, INTERCEPTOR_MSG, e.what());
@@ -219,7 +293,7 @@ void hsaInterceptor::addQueue(hsa_queue_t *queue, hsa_agent_t agent)
     auto result = (*(apiTable_->amd_ext_->hsa_amd_profiling_set_profiler_enabled_fn))(queue, true);
     assert(result == HSA_STATUS_SUCCESS && "Couldn't enable queue for profiling");
     
-    lock_guard<mutex> lock(mm_mutex_);
+    lock_guard<mutex> lock(mutex_);
 
     queues_[queue] = agent;
     auto it = isas_.find(agent);
@@ -321,7 +395,7 @@ void hsaInterceptor::hookApi(){
 }
 
 hsaInterceptor * hsaInterceptor::singleton_ = NULL;
-mutex hsaInterceptor::mutex_;
+//mutex hsaInterceptor::mutex_;
 shared_mutex hsaInterceptor::stop_mutex_;
 
 timeHelper globalTime;
@@ -354,7 +428,7 @@ extern "C" {
 
     PUBLIC_API void OnUnload() {
         // cout << "ROCMHOOK: Unloading" << endl;
-        //hsaInterceptor::cleanup();
+        hsaInterceptor::cleanup();
         printf("Elapsed usecs: %lu\n", globalTime.getElapsedNanos() / 1000);
     }
 
@@ -362,7 +436,7 @@ extern "C" {
     void unload_me()
     {
         // cout << "ROCMHOOK: Unloading" << endl;
-        //hsaInterceptor::cleanup();
+        hsaInterceptor::cleanup();
         printf("hsaInterceptor: Application elapsed usecs: %lu\n", globalTime.getElapsedNanos() / 1000);
     }
 }
