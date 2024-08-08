@@ -137,7 +137,9 @@ void hsaInterceptor::cleanup()
 }
 
 
-hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : signal_runner_(signal_runner) {
+hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
+    dispatch_count_(0), signal_runner_(signal_runner) 
+{
     apiTable_ = table;
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
@@ -148,9 +150,11 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
+    cout << "Joining the signal runner\n";
     signal_runner_.join();
     // Join signal processing thread here
     lock_guard<std::mutex> lock(mutex_);
+    cout << "At shutdown I have " << sig_pool_.size() << " signals in the pool\n";
     for (auto sig : sig_pool_)
         CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
     restoreHsaApi();
@@ -192,6 +196,7 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         pending_signals_.erase(sig);
         if (ki.signal_.handle)
         {
+            cout << "Subtracting something I shouldn't be\n";
             // need to subtract here because that would have been done if we hadn't swapped signals
             hsa_signal_subtract_scacq_screl(ki.signal_, 1);
         }
@@ -203,9 +208,11 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         auto dispatchNs = ki.th_.getStartTime();
         cout << "startNs,endNs,dispatchNs,Name\n";
         cout << startNs << "," << endNs << "," << dispatchNs << "," << ki.name_ << std::endl;
-        cout << "Elapsed micro seconds with all the host overhead: " << ki.th_.getElapsedMicros() << "us\n";
+        cout << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
+        cout << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
         sig_pool_.push_back(sig);
+        cout << "Size of sig_pool_ " << sig_pool_.size() << std::endl;
     }
     else
     {
@@ -226,16 +233,17 @@ void signal_runner()
                 auto size = curr_sigs.size();
                 for (unsigned long int i = 0; i < size; i++)
                 {
+                    assert(curr_sigs[i].handle);
                     if (!me->signalWait(curr_sigs[i], 1))
                     {
                         cout << "signalWait returned true\n";
                         me->signalCompleted(curr_sigs[i]);
-                        curr_sigs.erase(curr_sigs.begin() + i);
-                        size--;
+                        count++;
                     }
 
                 }
-            }while (curr_sigs.size());
+                curr_sigs.clear();
+            }while (me->getPendingSignals(curr_sigs));
         }
         usleep(1);
     }
@@ -316,13 +324,19 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         hsa_signal_t sig;
         if (!sig_pool_.size())
         {
-            for (auto sig : sig_pool_)
-                CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
+            for (int i = 0; i < SIGPOOL_INCREMENT; i++)
+            {
+                hsa_signal_t curr_sig = {};
+                CHECK_STATUS("Signal creation error replenishing",apiTable_->core_->hsa_signal_create_fn(1,0,NULL,&curr_sig));
+                sig_pool_.push_back(curr_sig);
+            }
         }
         sig = sig_pool_.back();
         sig_pool_.pop_back();
         pending_signals_[sig] = {dispatch->completion_signal, kernel_names_[dispatch->kernel_object], queues_[queue]};
         dispatch->completion_signal = sig;
+        dispatch_count_++;
+        cout << "fixupPacket count = " << dispatch_count_ << std::endl;
 
     }
     if (dispatch->kernel_object)
@@ -363,8 +377,6 @@ void hsaInterceptor::doPackets(hsa_queue_t *queue, const packet_t *packet, uint6
             else
                 writer(&packet[i],1);
         }
-        writer(packet, count); 
-
     } catch(const exception& e) {
         debug_out(cerr, INTERCEPTOR_MSG, e.what());
     }
@@ -423,6 +435,7 @@ hsa_status_t hsaInterceptor::hsa_queue_create(hsa_agent_t agent, uint32_t size, 
 
 hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
 {
+    cout << "DESTROY QUEUE\n";
     hsa_status_t result = HSA_STATUS_SUCCESS;
     try
     {

@@ -136,6 +136,7 @@ private:
     std::vector<hsa_signal_t> sig_pool_;
     std::map<uint64_t, std::string> kernel_names_;
     std::map<hsa_signal_t, hsa_signal_t, hsa_cmp<hsa_signal_t>> app_sigs_;
+    uint64_t dispatch_count_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;
     std::mutex mutex_;
