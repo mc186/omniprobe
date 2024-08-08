@@ -391,6 +391,7 @@ hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbo
 void hsaInterceptor::hookApi(){
     apiTable_->core_->hsa_queue_create_fn = hsaInterceptor::hsa_queue_create;
     apiTable_->core_->hsa_queue_destroy_fn = hsaInterceptor::hsa_queue_destroy;
+    apiTable_->core_->hsa_executable_symbol_get_info_fn = hsaInterceptor::hsa_executable_symbol_get_info;
 
 }
 
