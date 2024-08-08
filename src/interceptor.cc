@@ -125,16 +125,6 @@ void hsaInterceptor::shutdown()
 }
 
 
-void signal_runner()
-{
-    hsaInterceptor *me = hsaInterceptor::getInstance();
-    while (!me->shuttingdown())
-    {
-        cout << "Not shutting down in signal_runner\n";
-        sleep(1);
-    }
-    cout << "signal_runner is shutting down\n";
-}
 
 
 void hsaInterceptor::cleanup()
@@ -192,6 +182,82 @@ void hsaInterceptor::restoreHsaApi() {
 
 }
 
+void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
+{
+    lock_guard<std::mutex> lock(mutex_);
+    auto it = pending_signals_.find(sig);
+    if (it != pending_signals_.end())
+    {
+        kernel_info_t ki = it->second;
+        pending_signals_.erase(sig);
+        if (ki.signal_.handle)
+        {
+            // need to subtract here because that would have been done if we hadn't swapped signals
+            hsa_signal_subtract_scacq_screl(ki.signal_, 1);
+        }
+        // Need to extract start and stop here
+        hsa_amd_profiling_dispatch_time_t this_time;
+        apiTable_->amd_ext_->hsa_amd_profiling_get_dispatch_time_fn(ki.agent_, sig, &this_time);
+        auto startNs = this_time.start;
+        auto endNs = this_time.end;
+        auto dispatchNs = ki.th_.getStartTime();
+        cout << "startNs,endNs,dispatchNs,Name\n";
+        cout << startNs << "," << endNs << "," << dispatchNs << "," << ki.name_ << std::endl;
+        cout << "Elapsed micro seconds with all the host overhead: " << ki.th_.getElapsedMicros() << "us\n";
+        (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
+        sig_pool_.push_back(sig);
+    }
+    else
+    {
+        cout << "Some big problem occurred, a pending signal is missing\n";
+    }
+}
+
+void signal_runner()
+{
+    hsaInterceptor *me = hsaInterceptor::getInstance();
+    uint64_t count = 0;
+    while (!me->shuttingdown())
+    {
+        std::vector<hsa_signal_t> curr_sigs;
+        if (me->getPendingSignals(curr_sigs))
+        {
+            do{
+                auto size = curr_sigs.size();
+                for (unsigned long int i = 0; i < size; i++)
+                {
+                    if (!me->signalWait(curr_sigs[i], 1))
+                    {
+                        cout << "signalWait returned true\n";
+                        me->signalCompleted(curr_sigs[i]);
+                        curr_sigs.erase(curr_sigs.begin() + i);
+                        size--;
+                    }
+
+                }
+            }while (curr_sigs.size());
+        }
+        usleep(1);
+    }
+    cout << "signal_runner is shutting down\n";
+}
+
+bool hsaInterceptor::signalWait(hsa_signal_t sig, uint64_t timeout)
+{
+    return (apiTable_->core_->hsa_signal_wait_scacquire_fn)(
+                sig, HSA_SIGNAL_CONDITION_EQ, 0,
+                timeout, HSA_WAIT_STATE_ACTIVE);
+}
+
+bool hsaInterceptor::getPendingSignals(std::vector<hsa_signal_t>& outSigs)
+{
+    lock_guard<std::mutex> lock(mutex);
+    for (const auto& pair : pending_signals_)
+    {
+        outSigs.push_back(pair.first);
+    }
+    return outSigs.size() != 0;
+}
 
 string hsaInterceptor::packetToText(const packet_t *packet)
 {
@@ -245,8 +311,27 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
     hsa_kernel_dispatch_packet_t *dispatch = new hsa_kernel_dispatch_packet_t;
     *dispatch = *packet;
     cout << "Fixed up a packet\n";
-    if (dispatch->completion_signal.handle)
-        cout << "Packet has a completion handle: 0x" << std::hex << dispatch->completion_signal.handle << std::dec << std::endl;
+    {
+        lock_guard<std::mutex> lock(mutex_);
+        hsa_signal_t sig;
+        if (!sig_pool_.size())
+        {
+            for (auto sig : sig_pool_)
+                CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
+        }
+        sig = sig_pool_.back();
+        sig_pool_.pop_back();
+        pending_signals_[sig] = {dispatch->completion_signal, kernel_names_[dispatch->kernel_object], queues_[queue]};
+        dispatch->completion_signal = sig;
+
+    }
+    if (dispatch->kernel_object)
+    {
+        lock_guard<std::mutex> lock(mutex_);
+        auto it = kernel_names_.find(dispatch->kernel_object);
+        if (it != kernel_names_.end())
+            cout << "Dispatching " << it->second << std::endl;
+    }
     return dispatch;
 }
 
@@ -349,6 +434,18 @@ hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
     }
     return result;
 }
+
+
+void hsaInterceptor::addKernel(uint64_t kernelObject, std::string& name)
+{
+   lock_guard<std::mutex> lock(mutex_);
+   auto it = kernel_names_.find(kernelObject);
+   if (it == kernel_names_.end())
+   {
+        std::string thisName = demangleName(name.c_str());
+        kernel_names_[kernelObject] = thisName.length() ? thisName : name;
+   }
+}
  
 hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute, void *data)
 {
@@ -369,8 +466,7 @@ hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbo
                     {
                        uint64_t kernelObject = *reinterpret_cast<uint64_t *>(data);
                        string strName = name;
-                       cout << "symbol_get_info kernel name: " << strName << endl;
-                       //getInstance()->addSymbol(symbol, kernelObject, strName);
+                       getInstance()->addKernel(kernelObject, strName);
                     }
                     else
                     {

@@ -20,6 +20,7 @@
 
 
 class hsaInterceptor;
+void signal_runner();
 
 #define PUBLIC_API __attribute__((visibility("default")))
 #define CONSTRUCTOR_API __attribute__((constructor))
@@ -60,7 +61,8 @@ static const int CHECKSUM_PAGE_SIZE = 1 << 20;
 typedef struct kernel_info{
     hsa_signal_t signal_;
     std::string name_;
-    timeHelper th;
+    hsa_agent_t agent_;
+    timeHelper th_;
 }kernel_info_t;
 
 
@@ -73,8 +75,10 @@ private:
     void hookApi();
     void addQueue(hsa_queue_t *queue, hsa_agent_t agent);
     void removeQueue(hsa_queue_t *queue);
+    void addKernel(uint64_t kernelObject, std::string& name);
     bool getPendingSignals(std::vector<hsa_signal_t>& outSigs);
     void signalCompleted(const hsa_signal_t sig);
+    bool signalWait(hsa_signal_t sig, uint64_t timeout);
     static void OnSubmitPackets(const void* in_packets, uint64_t count, uint64_t user_que_idx, void* data,
                          hsa_amd_queue_intercept_packet_writer writer);
     static hsa_status_t hsa_queue_create(hsa_agent_t agent, uint32_t size, hsa_queue_type32_t type, void(*callback)(hsa_status_t status, hsa_queue_t *source, void *data), void *data, uint32_t private_segment_size, uint32_t group_segment_size, hsa_queue_t **queue);
@@ -103,6 +107,21 @@ public:
         const packet_word_t* header = reinterpret_cast<const packet_word_t*>(packet);
         return static_cast<hsa_packet_type_t>((*header >> HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) & header_scacquire_scope_mask);
     }
+    static std::string demangleName(const char *name)
+    {
+       int status;
+       std::string result;
+       char *realname = abi::__cxa_demangle(name, 0, 0, &status);
+       if (status == 0)
+       {
+           if (realname)
+           {
+               result = realname;
+               free(realname);
+           }
+       }
+       return result;
+    }
     friend void signal_runner();
 protected:
     bool shuttingdown();
@@ -115,6 +134,7 @@ private:
     std::map<hsa_agent_t, std::string, hsa_cmp<hsa_agent_t>> isas_;
     std::map<hsa_signal_t, kernel_info_t, hsa_cmp<hsa_signal_t>> pending_signals_;
     std::vector<hsa_signal_t> sig_pool_;
+    std::map<uint64_t, std::string> kernel_names_;
     std::map<hsa_signal_t, hsa_signal_t, hsa_cmp<hsa_signal_t>> app_sigs_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;
