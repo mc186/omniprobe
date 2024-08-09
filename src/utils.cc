@@ -114,23 +114,22 @@ hsa_executable_t coCache::getInstrumented(hsa_executable_t, std::string name)
 }
 
 unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
-    std::map<std::string, std::string> logDirectories;
 
     // Read the environment variables
-    const char* logDirLogLocation = std::getenv("LOGDIR_LOG_LOCATION");
-    const char* logDirKernelCache = std::getenv("LOGDIR_KERNEL_CACHE");
+    const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
+    const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
 
     // If the environment variables are set, add them to the map
-    if (logDirLogLocation) {
-        config["LOGDIR_LOG_LOCATION"] = std::string(logDirLogLocation);
+    if (logDurLogLocation) {
+        config["LOGDUR_LOG_LOCATION"] = std::string(logDurLogLocation);
     } else {
-        config["LOGDIR_LOG_LOCATION"] = "console";  // Default or empty value if not set
+        config["LOGDUR_LOG_LOCATION"] = "console";  // Default or empty value if not set
     }
 
-    if (logDirKernelCache) {
-        config["LOGDIR_KERNEL_CACHE"] = std::string(logDirKernelCache);
+    if (logDurKernelCache) {
+        config["LOGDUR_KERNEL_CACHE"] = std::string(logDurKernelCache);
     } else {
-        config["LOGDIR_KERNEL_CACHE"] = "";  // Default or empty value if not set
+        config["LOGDUR_KERNEL_CACHE"] = "";  // Default or empty value if not set
     }
 
     return config.size();
@@ -143,7 +142,7 @@ logDuration::logDuration()
         log_file_ = &cout;
     else
         log_file_ = new std::ofstream(location_, std::ios::app);
-    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
+    (*log_file_) << "kernel,dispatch,startNs,endNs" << std::endl;
 }
 
 logDuration::logDuration(std::string& location)
@@ -166,6 +165,10 @@ logDuration::~logDuration()
     
 void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs)
 {
+    if (log_file_)
+        *log_file_ << kernelName << "," << std::dec << dispatchTime << "," << startNs << "," << endNs << std::endl;
+    else
+        cerr << "Can't find anyplace to log\n";
 }
 
 bool logDuration::setLocation(const std::string& strLocation)
@@ -175,6 +178,7 @@ bool logDuration::setLocation(const std::string& strLocation)
         if (log_file_)
             delete log_file_;
     }
+    cerr << "logDuration::setLocation = " << strLocation << std::endl;
     location_ = strLocation;
     if (!location_.length())
         location_ = "/dev/null";

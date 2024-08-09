@@ -205,10 +205,9 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         auto startNs = this_time.start;
         auto endNs = this_time.end;
         auto dispatchNs = ki.th_.getStartTime();
-        cout << "startNs,endNs,dispatchNs,Name\n";
-        cout << startNs << "," << endNs << "," << dispatchNs << "," << ki.name_ << std::endl;
-        cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
-        cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
+        log_.log(ki.name_, dispatchNs, startNs, endNs);
+        //cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
+        //cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
         sig_pool_.push_back(sig);
     }
