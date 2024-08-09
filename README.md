@@ -14,12 +14,22 @@ Silently replacing kernels is a technique the Audacious Software team plans to u
 But I suspect it will be really useful even just for doing comparative performance analysis while avoiding
 the rebuilding of entire applications.
 ## Running
-HSA_TOOLS_LIB=\<path to liblogdur64.so\> <your application here\>
-- e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
+HSA_TOOLS_LIB=\<path to liblogdur64.so\> <your application here\>  
+
+e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
 ## Environment Variables
 - LOGDUR_LOG_LOCATION
   - console
   - file name
   - /dev/null
 - LOGDUR_KERNEL_CACHE
+## Building  
+```
+  git clone https://github.com/AARInternal/logduration.git
+  cd logduration
+  mkdir build
+  cd build
+  cmake ..
+  make
+```
 
