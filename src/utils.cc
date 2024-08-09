@@ -136,6 +136,15 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     return config.size();
 }
 
+logDuration::logDuration()
+{
+    location_ = "console";
+    if (location_ == "console")
+        log_file_ = &cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
+    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
+}
 
 logDuration::logDuration(std::string& location)
 {
@@ -143,7 +152,8 @@ logDuration::logDuration(std::string& location)
     if (location == "console")
         log_file_ = &cout;
     else
-        log_file_ = new std::ofstream(location);
+        log_file_ = new std::ofstream(location, std::ios::app);
+    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
 }
 
 logDuration::~logDuration()
@@ -156,4 +166,22 @@ logDuration::~logDuration()
     
 void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs)
 {
+}
+
+bool logDuration::setLocation(const std::string& strLocation)
+{
+    if (location_ != "console" && location_ != "/dev/null")
+    {
+        if (log_file_)
+            delete log_file_;
+    }
+    location_ = strLocation;
+    if (!location_.length())
+        location_ = "/dev/null";
+    if (location_ == "console")
+        log_file_ = &cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
+    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
+    return log_file_ != NULL;
 }

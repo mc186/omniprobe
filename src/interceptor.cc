@@ -140,6 +140,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     dispatch_count_(0), signal_runner_(signal_runner) 
 {
     apiTable_ = table;
+    getLogDurConfig(config_);
+    log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
         hsa_signal_t curr_sig;
@@ -525,7 +527,7 @@ extern "C" {
     PUBLIC_API void OnUnload() {
         // cout << "ROCMHOOK: Unloading" << endl;
         hsaInterceptor::cleanup();
-        printf("Elapsed usecs: %lu\n", globalTime.getElapsedNanos() / 1000);
+        cerr << "hsaInterceptor: Application elapsed usecs: " << globalTime.getElapsedNanos() / 1000 << "us\n";
     }
 
     static void unload_me() __attribute__((destructor));
@@ -533,6 +535,6 @@ extern "C" {
     {
         // cout << "ROCMHOOK: Unloading" << endl;
         hsaInterceptor::cleanup();
-        printf("hsaInterceptor: Application elapsed usecs: %lu\n", globalTime.getElapsedNanos() / 1000);
+        cerr << "hsaInterceptor: Application elapsed usecs: " << globalTime.getElapsedNanos() / 1000 << "us\n";
     }
 }

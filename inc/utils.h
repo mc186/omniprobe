@@ -100,9 +100,11 @@ private:
 
 class logDuration{
 public:
+    logDuration();
     logDuration(std::string& location);
     ~logDuration();
     void log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs);
+    bool setLocation(const std::string& strLocation);
 private:
     std::ostream *log_file_;
     std::string location_;

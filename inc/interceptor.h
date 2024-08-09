@@ -136,10 +136,12 @@ private:
     std::vector<hsa_signal_t> sig_pool_;
     std::map<uint64_t, std::string> kernel_names_;
     std::map<hsa_signal_t, hsa_signal_t, hsa_cmp<hsa_signal_t>> app_sigs_;
+    std::map<std::string, std::string> config_;
     uint64_t dispatch_count_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;
     std::mutex mutex_;
+    logDuration log_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;
