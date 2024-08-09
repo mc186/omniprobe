@@ -47,64 +47,82 @@ void signalPool::checkin(hsa_signal_t sig)
 
 coCache::coCache(std::string& directory)
 {
-    try {
-        for (const auto& entry : fs::directory_iterator(directory)) {
-            if (entry.is_regular_file() && entry.path().extension() == ".hsaco") {
-                filelist_.push_back(entry.path().string());
-				/*hsa_status_t status = HSA_STATUS_ERROR;
-
-				// Build the code object filename
-				std::string filename(brig_path);
-				std::clog << "Code object filename: " << filename << std::endl;
-
-				// Open the file containing code object
-				hsa_file_t file_handle = open(filename.c_str(), O_RDONLY);
-				if (file_handle == -1) {
-					std::cerr << "Error: failed to load '" << filename << "'" << std::endl;
-					assert(false);
-					return false;
-				}
-
-				// Create code object reader
-				hsa_code_object_reader_t code_obj_rdr = {0};
-				status = hsa_api_.hsa_code_object_reader_create_from_file(file_handle, &code_obj_rdr);
-				if (status != HSA_STATUS_SUCCESS) {
-					std::cerr << "Failed to create code object reader '" << filename << "'" << std::endl;
-					return false;
-				}
-
-				// Create executable.
-				status = hsa_api_.hsa_executable_create_alt(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
-													 NULL, executable);
-				CHECK_STATUS("Error in creating executable object", status);
-
-				// Load code object.
-				status = hsa_api_.hsa_executable_load_agent_code_object(*executable, agent_info->dev_id, code_obj_rdr,
-																 NULL, NULL);
-				CHECK_STATUS("Error in loading executable object", status);
-
-				// Freeze executable.
-				status = hsa_api_.hsa_executable_freeze(*executable, "");
-				CHECK_STATUS("Error in freezing executable object", status);
-
-				// Get symbol handle.
-				hsa_executable_symbol_t kernelSymbol;
-				status = hsa_api_.hsa_executable_get_symbol(*executable, NULL, kernel_name, agent_info->dev_id, 0,
-												 &kernelSymbol);
-				CHECK_STATUS("Error in looking up kernel symbol", status);
-
-				close(file_handle);*/
-            }
-        }
-    } catch (const fs::filesystem_error& e) {
-        std::cerr << "Filesystem error: " << e.what() << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "General exception: " << e.what() << std::endl;
-    }
+    if (directory.length())
+        setLocation(directory);
 }
 
 coCache::~coCache()
 {
+}
+    
+bool coCache::setLocation(const std::string& directory)
+{
+    filelist_.clear();
+    if (directory.length())
+    {
+        location_ = directory;
+        try {
+            for (const auto& entry : fs::directory_iterator(directory)) {
+                if (entry.is_regular_file() && entry.path().extension() == ".hsaco") {
+                    filelist_.push_back(entry.path().string());
+                }
+            }
+
+            for (auto file : filelist_)
+            {
+                cout << "coCache::filelist_: " << file << std::endl;
+            
+                /*hsa_status_t status = HSA_STATUS_ERROR;
+
+                // Build the code object filename
+                std::string filename(brig_path);
+                std::clog << "Code object filename: " << filename << std::endl;
+
+                // Open the file containing code object
+                hsa_file_t file_handle = open(filename.c_str(), O_RDONLY);
+                if (file_handle == -1) {
+                    std::cerr << "Error: failed to load '" << filename << "'" << std::endl;
+                    assert(false);
+                    return false;
+                }
+
+                // Create code object reader
+                hsa_code_object_reader_t code_obj_rdr = {0};
+                status = apiTable_->hsa_code_object_reader_create_from_file(file_handle, &code_obj_rdr);
+                if (status != HSA_STATUS_SUCCESS) {
+                    std::cerr << "Failed to create code object reader '" << filename << "'" << std::endl;
+                    return false;
+                }
+
+                // Create executable.
+                status = apiTable_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
+                                                     NULL, executable);
+                CHECK_STATUS("Error in creating executable object", status);
+
+                // Load code object.
+                status = apiTable_->hsa_executable_load_agent_code_object_fn(*executable, agent_info->dev_id, code_obj_rdr,
+                                                                 NULL, NULL);
+                CHECK_STATUS("Error in loading executable object", status);
+
+                // Freeze executable.
+                status = apiTable_->hsa_executable_freeze_fn(*executable, "");
+                CHECK_STATUS("Error in freezing executable object", status);
+
+                // Get symbol handle.
+                hsa_executable_symbol_t kernelSymbol;
+                status = apiTable_->hsa_executable_get_symbol_fn(*executable, NULL, kernel_name, agent_info->dev_id, 0,
+                                                 &kernelSymbol);
+                CHECK_STATUS("Error in looking up kernel symbol", status);
+
+                close(file_handle);*/
+            }
+        } catch (const fs::filesystem_error& e) {
+            std::cerr << "Filesystem error: " << e.what() << std::endl;
+        } catch (const std::exception& e) {
+            std::cerr << "General exception: " << e.what() << std::endl;
+        }
+    }
+    return filelist_.size() != 0;
 }
 
 hsa_executable_t coCache::getInstrumented(hsa_executable_t, std::string name)

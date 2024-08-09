@@ -60,6 +60,8 @@ THE SOFTWARE.
 #include <hsa_ven_amd_aqlprofile.h>
 #include <hsa_ven_amd_loader.h>
 #include "rocprofiler/rocprofiler.h"
+#define AMD_INTERNAL_BUILD
+#include <hsa_api_trace.h>
 
 
 
@@ -87,15 +89,24 @@ private:
     std::mutex mutex_;
 };
 
+
+typedef struct symbol_info {
+}symbol_info_t;
+
 class coCache{
 public:
+    coCache(HsaApiTable *apiTable) {apiTable_ = apiTable;}
     coCache(std::string& directory);
     ~coCache();
+    bool setLocation(const std::string& directory);
     hsa_executable_t getInstrumented(hsa_executable_t, std::string name);
 private:
+    HsaApiTable *apiTable_;
+    std::map<std::string, symbol_info_t> symbol_cache_;
     std::map<std::string,hsa_executable_t> cache_;
     std::vector<std::string> filelist_;
     std::mutex mutex_;
+    std::string location_;
 };
 
 class logDuration{

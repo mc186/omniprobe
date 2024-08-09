@@ -137,11 +137,12 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner) 
+    dispatch_count_(0), signal_runner_(signal_runner), kernel_cache_(table) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
+    kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
         hsa_signal_t curr_sig;
