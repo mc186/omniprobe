@@ -97,3 +97,16 @@ private:
     std::vector<std::string> filelist_;
     std::mutex mutex_;
 };
+
+class logDuration{
+public:
+    logDuration(std::string& location);
+    ~logDuration();
+    void log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs);
+private:
+    std::ostream *log_file_;
+    std::string location_;
+};
+
+
+unsigned int getLogDurConfig(std::map<std::string, std::string>& config);

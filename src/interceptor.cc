@@ -110,7 +110,6 @@ void hsaInterceptor::OnSubmitPackets(const void* in_packets, uint64_t count,
     {
         hsa_queue_t *queue = reinterpret_cast<hsa_queue_t *>(data);
         hook->doPackets(queue, static_cast<const packet_t *>(in_packets), count, writer);
-        cout << "Enqueued " << count << " packet(s)\n";
     }
 }
 
@@ -154,7 +153,6 @@ hsaInterceptor::~hsaInterceptor() {
     signal_runner_.join();
     // Join signal processing thread here
     lock_guard<std::mutex> lock(mutex_);
-    cout << "At shutdown I have " << sig_pool_.size() << " signals in the pool\n";
     for (auto sig : sig_pool_)
         CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
     restoreHsaApi();
@@ -212,7 +210,6 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         cout << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
         sig_pool_.push_back(sig);
-        cout << "Size of sig_pool_ " << sig_pool_.size() << std::endl;
     }
     else
     {
@@ -236,7 +233,6 @@ void signal_runner()
                     assert(curr_sigs[i].handle);
                     if (!me->signalWait(curr_sigs[i], 1))
                     {
-                        cout << "signalWait returned true\n";
                         me->signalCompleted(curr_sigs[i]);
                         count++;
                     }
@@ -318,7 +314,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
 {
     hsa_kernel_dispatch_packet_t *dispatch = new hsa_kernel_dispatch_packet_t;
     *dispatch = *packet;
-    cout << "Fixed up a packet\n";
     {
         lock_guard<std::mutex> lock(mutex_);
         hsa_signal_t sig;
@@ -336,15 +331,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         pending_signals_[sig] = {dispatch->completion_signal, kernel_names_[dispatch->kernel_object], queues_[queue]};
         dispatch->completion_signal = sig;
         dispatch_count_++;
-        cout << "fixupPacket count = " << dispatch_count_ << std::endl;
 
-    }
-    if (dispatch->kernel_object)
-    {
-        lock_guard<std::mutex> lock(mutex_);
-        auto it = kernel_names_.find(dispatch->kernel_object);
-        if (it != kernel_names_.end())
-            cout << "Dispatching " << it->second << std::endl;
     }
     return dispatch;
 }

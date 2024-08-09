@@ -113,4 +113,47 @@ hsa_executable_t coCache::getInstrumented(hsa_executable_t, std::string name)
     return {};
 }
 
+unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
+    std::map<std::string, std::string> logDirectories;
 
+    // Read the environment variables
+    const char* logDirLogLocation = std::getenv("LOGDIR_LOG_LOCATION");
+    const char* logDirKernelsLocation = std::getenv("LOGDIR_KERNELS_LOCATION");
+
+    // If the environment variables are set, add them to the map
+    if (logDirLogLocation) {
+        config["LOGDIR_LOG_LOCATION"] = std::string(logDirLogLocation);
+    } else {
+        config["LOGDIR_LOG_LOCATION"] = "console";  // Default or empty value if not set
+    }
+
+    if (logDirKernelsLocation) {
+        config["LOGDIR_KERNELS_LOCATION"] = std::string(logDirKernelsLocation);
+    } else {
+        config["LOGDIR_KERNELS_LOCATION"] = "";  // Default or empty value if not set
+    }
+
+    return config.size();
+}
+
+
+logDuration::logDuration(std::string& location)
+{
+    location_ = location;
+    if (location == "console")
+        log_file_ = &cout;
+    else
+        log_file_ = new std::ofstream(location);
+}
+
+logDuration::~logDuration()
+{
+    if (location_ != "console")
+    {
+        delete log_file_;
+    }
+}
+    
+void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs)
+{
+}
