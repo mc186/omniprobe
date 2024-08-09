@@ -149,7 +149,7 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
-    cout << "Joining the signal runner\n";
+    cerr << "Joining the signal runner\n";
     signal_runner_.join();
     // Join signal processing thread here
     lock_guard<std::mutex> lock(mutex_);
@@ -194,7 +194,6 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         pending_signals_.erase(sig);
         if (ki.signal_.handle)
         {
-            cout << "Subtracting something I shouldn't be\n";
             // need to subtract here because that would have been done if we hadn't swapped signals
             hsa_signal_subtract_scacq_screl(ki.signal_, 1);
         }
@@ -206,14 +205,14 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         auto dispatchNs = ki.th_.getStartTime();
         cout << "startNs,endNs,dispatchNs,Name\n";
         cout << startNs << "," << endNs << "," << dispatchNs << "," << ki.name_ << std::endl;
-        cout << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
-        cout << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
+        cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
+        cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
         sig_pool_.push_back(sig);
     }
     else
     {
-        cout << "Some big problem occurred, a pending signal is missing\n";
+        cerr << "Some big problem occurred, a pending signal is missing\n";
     }
 }
 
@@ -243,7 +242,7 @@ void signal_runner()
         }
         usleep(1);
     }
-    cout << "signal_runner is shutting down\n";
+    cerr << "signal_runner is shutting down\n";
 }
 
 bool hsaInterceptor::signalWait(hsa_signal_t sig, uint64_t timeout)
@@ -411,7 +410,7 @@ hsa_status_t hsaInterceptor::hsa_queue_create(hsa_agent_t agent, uint32_t size, 
             if (hookResult != HSA_STATUS_SUCCESS) {
                 debug_out(cerr, "hsaInterceptor: Failed to register intercept callback with result of ", hookResult);
             } else {
-                cout << DBG << " HSA intercept registered.\n";
+                cerr << DBG << " HSA intercept registered.\n";
             }
         }
     } catch(const exception& e) {
@@ -422,7 +421,7 @@ hsa_status_t hsaInterceptor::hsa_queue_create(hsa_agent_t agent, uint32_t size, 
 
 hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
 {
-    cout << "DESTROY QUEUE\n";
+    cerr << "DESTROY QUEUE\n";
     hsa_status_t result = HSA_STATUS_SUCCESS;
     try
     {
