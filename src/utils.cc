@@ -118,7 +118,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
 
     // Read the environment variables
     const char* logDirLogLocation = std::getenv("LOGDIR_LOG_LOCATION");
-    const char* logDirKernelsLocation = std::getenv("LOGDIR_KERNELS_LOCATION");
+    const char* logDirKernelCache = std::getenv("LOGDIR_KERNEL_CACHE");
 
     // If the environment variables are set, add them to the map
     if (logDirLogLocation) {
@@ -127,10 +127,10 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
         config["LOGDIR_LOG_LOCATION"] = "console";  // Default or empty value if not set
     }
 
-    if (logDirKernelsLocation) {
-        config["LOGDIR_KERNELS_LOCATION"] = std::string(logDirKernelsLocation);
+    if (logDirKernelCache) {
+        config["LOGDIR_KERNEL_CACHE"] = std::string(logDirKernelCache);
     } else {
-        config["LOGDIR_KERNELS_LOCATION"] = "";  // Default or empty value if not set
+        config["LOGDIR_KERNEL_CACHE"] = "";  // Default or empty value if not set
     }
 
     return config.size();
