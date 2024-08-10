@@ -150,6 +150,26 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
         CHECK_STATUS("Signal creation error at startup",apiTable_->core_->hsa_signal_create_fn(1,0,NULL,&curr_sig));
         sig_pool_.emplace_back(curr_sig);
     }
+
+	std::vector<hsa_agent_t> gpus;
+	if (hsa_iterate_agents ([](hsa_agent_t agent, void *data){
+                    std::vector<hsa_agent_t> *agents  = reinterpret_cast<std::vector<hsa_agent_t> *>(data);
+					hsa_device_type_t type;
+                    hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, static_cast<void *>(&type));
+					if (status == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_GPU)
+						agents->emplace_back(agent); 
+                    return HSA_STATUS_SUCCESS;
+                }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
+            {
+                std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
+                if (cacheLocation.length())
+                {
+                    for (auto agent : gpus)
+                    {
+                        kernel_cache_.setLocation(agent, cacheLocation);
+                    }
+                }
+            }
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
