@@ -45,17 +45,12 @@ void signalPool::checkin(hsa_signal_t sig)
     lock_guard<mutex> lock(mutex_);
 }
 
-coCache::coCache(std::string& directory)
-{
-    if (directory.length())
-        setLocation(directory);
-}
 
 coCache::~coCache()
 {
 }
     
-bool coCache::setLocation(const std::string& directory)
+bool coCache::setLocation(hsa_agent_t, const std::string& directory, bool instrumented)
 {
     filelist_.clear();
     if (directory.length())
@@ -88,29 +83,29 @@ bool coCache::setLocation(const std::string& directory)
 
                 // Create code object reader
                 hsa_code_object_reader_t code_obj_rdr = {0};
-                status = apiTable_->hsa_code_object_reader_create_from_file(file_handle, &code_obj_rdr);
+                status = apiTable_->core_->hsa_code_object_reader_create_from_file(file_handle, &code_obj_rdr);
                 if (status != HSA_STATUS_SUCCESS) {
                     std::cerr << "Failed to create code object reader '" << filename << "'" << std::endl;
                     return false;
                 }
 
                 // Create executable.
-                status = apiTable_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
+                status = apiTable_->core_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
                                                      NULL, executable);
                 CHECK_STATUS("Error in creating executable object", status);
 
                 // Load code object.
-                status = apiTable_->hsa_executable_load_agent_code_object_fn(*executable, agent_info->dev_id, code_obj_rdr,
+                status = apiTable_->core_->hsa_executable_load_agent_code_object_fn(*executable, agent_info->dev_id, code_obj_rdr,
                                                                  NULL, NULL);
                 CHECK_STATUS("Error in loading executable object", status);
 
                 // Freeze executable.
-                status = apiTable_->hsa_executable_freeze_fn(*executable, "");
+                status = apiTable_->core_->hsa_executable_freeze_fn(*executable, "");
                 CHECK_STATUS("Error in freezing executable object", status);
 
                 // Get symbol handle.
                 hsa_executable_symbol_t kernelSymbol;
-                status = apiTable_->hsa_executable_get_symbol_fn(*executable, NULL, kernel_name, agent_info->dev_id, 0,
+                status = apiTable_->core_->hsa_executable_get_symbol_fn(*executable, NULL, kernel_name, agent_info->dev_id, 0,
                                                  &kernelSymbol);
                 CHECK_STATUS("Error in looking up kernel symbol", status);
 
@@ -124,12 +119,17 @@ bool coCache::setLocation(const std::string& directory)
     }
     return filelist_.size() != 0;
 }
-
-hsa_executable_t coCache::getInstrumented(hsa_executable_t, std::string name)
+    
+uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name)
 {
-    lock_guard<mutex> lock(mutex_);
-    return {};
+    return 0;
 }
+
+uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name)
+{
+    return 0;
+}
+
 
 unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
 
@@ -206,4 +206,26 @@ bool logDuration::setLocation(const std::string& strLocation)
         log_file_ = new std::ofstream(location_, std::ios::app);
     *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
     return log_file_ != NULL;
+}
+
+void clipKernelName(std::string& str)
+{
+    // Find the position of the last comma in the string
+    size_t lastCommaPos = str.rfind(')');
+
+    // If a comma is found, replace it with a right parenthesis and terminate the string
+    if (lastCommaPos != std::string::npos) {
+        str.resize(lastCommaPos + 1); // Resize the string to terminate after the parenthesis
+    }
+}
+
+void clipInstrumentedKernelName(std::string& str) {
+    // Find the position of the last comma in the string
+    size_t lastCommaPos = str.rfind(',');
+
+    // If a comma is found, replace it with a right parenthesis and terminate the string
+    if (lastCommaPos != std::string::npos) {
+        str[lastCommaPos] = ')';
+        str.resize(lastCommaPos + 1); // Resize the string to terminate after the parenthesis
+    }
 }

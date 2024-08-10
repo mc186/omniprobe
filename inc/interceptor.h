@@ -65,6 +65,11 @@ typedef struct kernel_info{
     timeHelper th_;
 }kernel_info_t;
 
+typedef struct ld_kernel_descriptor {
+    std::string name_;
+    hsa_executable_symbol_t symbol_;
+    hsa_agent_t agent_;
+}ld_kernel_descriptor_t;
 
 class hsaInterceptor {
 private:
@@ -75,7 +80,7 @@ private:
     void hookApi();
     void addQueue(hsa_queue_t *queue, hsa_agent_t agent);
     void removeQueue(hsa_queue_t *queue);
-    void addKernel(uint64_t kernelObject, std::string& name);
+    void addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent);
     bool getPendingSignals(std::vector<hsa_signal_t>& outSigs);
     void signalCompleted(const hsa_signal_t sig);
     bool signalWait(hsa_signal_t sig, uint64_t timeout);
@@ -134,7 +139,7 @@ private:
     std::map<hsa_agent_t, std::string, hsa_cmp<hsa_agent_t>> isas_;
     std::map<hsa_signal_t, kernel_info_t, hsa_cmp<hsa_signal_t>> pending_signals_;
     std::vector<hsa_signal_t> sig_pool_;
-    std::map<uint64_t, std::string> kernel_names_;
+    std::map<uint64_t, ld_kernel_descriptor_t> kernel_objects_;
     std::map<hsa_signal_t, hsa_signal_t, hsa_cmp<hsa_signal_t>> app_sigs_;
     std::map<std::string, std::string> config_;
     uint64_t dispatch_count_;

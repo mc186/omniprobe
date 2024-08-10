@@ -96,10 +96,10 @@ typedef struct symbol_info {
 class coCache{
 public:
     coCache(HsaApiTable *apiTable) {apiTable_ = apiTable;}
-    coCache(std::string& directory);
     ~coCache();
-    bool setLocation(const std::string& directory);
-    hsa_executable_t getInstrumented(hsa_executable_t, std::string name);
+    bool setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented = true);
+    uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
+    uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
 private:
     HsaApiTable *apiTable_;
     std::map<std::string, symbol_info_t> symbol_cache_;
@@ -123,3 +123,5 @@ private:
 
 
 unsigned int getLogDurConfig(std::map<std::string, std::string>& config);
+void clipInstrumentedKernelName(std::string& str);
+void clipKernelName(std::string& str);

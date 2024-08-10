@@ -142,7 +142,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     apiTable_ = table;
     getLogDurConfig(config_);
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
-    kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
+    // need to iterate all GPU agents here and setLocation for each one
+    //kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
         hsa_signal_t curr_sig;
@@ -329,7 +330,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         }
         sig = sig_pool_.back();
         sig_pool_.pop_back();
-        pending_signals_[sig] = {dispatch->completion_signal, kernel_names_[dispatch->kernel_object], queues_[queue]};
+        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue]};
         dispatch->completion_signal = sig;
         dispatch_count_++;
 
@@ -437,14 +438,14 @@ hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
 }
 
 
-void hsaInterceptor::addKernel(uint64_t kernelObject, std::string& name)
+void hsaInterceptor::addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent)
 {
    lock_guard<std::mutex> lock(mutex_);
-   auto it = kernel_names_.find(kernelObject);
-   if (it == kernel_names_.end())
+   auto it = kernel_objects_.find(kernelObject);
+   if (it == kernel_objects_.end())
    {
         std::string thisName = demangleName(name.c_str());
-        kernel_names_[kernelObject] = thisName.length() ? thisName : name;
+        kernel_objects_[kernelObject] = {thisName.length() ? thisName : name, symbol, agent};
    }
 }
  
@@ -467,7 +468,7 @@ hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbo
                     {
                        uint64_t kernelObject = *reinterpret_cast<uint64_t *>(data);
                        string strName = name;
-                       getInstance()->addKernel(kernelObject, strName);
+                       getInstance()->addKernel(kernelObject, strName, symbol, {});
                     }
                     else
                     {
