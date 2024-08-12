@@ -40,14 +40,6 @@ void signal_runner();
     #define debug_out(...)
 #endif
 
-template<typename T>
-struct hsa_cmp
-{
-    bool operator() (const T& first, const T& second) const
-    {
-        return first.handle < second.handle;
-    }
-};
 
 typedef uint32_t packet_word_t;
 typedef hsa_kernel_dispatch_packet_t dispatch_packet_t;
@@ -142,6 +134,7 @@ private:
     std::map<uint64_t, ld_kernel_descriptor_t> kernel_objects_;
     std::map<hsa_signal_t, hsa_signal_t, hsa_cmp<hsa_signal_t>> app_sigs_;
     std::map<std::string, std::string> config_;
+    std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> kernargs_;
     uint64_t dispatch_count_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;

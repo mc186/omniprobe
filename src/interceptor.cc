@@ -142,7 +142,6 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     apiTable_ = table;
     getLogDurConfig(config_);
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
-    // need to iterate all GPU agents here and setLocation for each one
     //kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
@@ -170,6 +169,10 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                     }
                 }
             }
+    std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
+    for (auto agent : gpus)
+        kernel_cache_.setLocation(agent, cacheLocation);
+
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
@@ -350,6 +353,17 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         }
         sig = sig_pool_.back();
         sig_pool_.pop_back();
+        uint64_t alt_kernel_object;
+        if (kernel_cache_.hasKernels())
+        {
+            auto it = kernel_objects_.find(packet->kernel_object);
+            if (it != kernel_objects_.end())
+            {
+                uint64_t alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
+                if (alt_kernel_object)
+                    dispatch->kernel_object = alt_kernel_object;
+            }
+        }
         pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue]};
         dispatch->completion_signal = sig;
         dispatch_count_++;

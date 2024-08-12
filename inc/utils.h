@@ -76,6 +76,14 @@ using namespace std;
   }                                                                                                \
 } while (0)
 
+template<typename T>
+struct hsa_cmp
+{
+    bool operator() (const T& first, const T& second) const
+    {
+        return first.handle < second.handle;
+    }
+};
 
 class signalPool{
 public:
@@ -93,6 +101,12 @@ private:
 typedef struct symbol_info {
 }symbol_info_t;
 
+typedef struct cache_object{
+    hsa_executable_t executable_;
+    std::string filename_;
+    std::chrono::time_point<std::chrono::system_clock> timestamp_;
+}cache_object_t;
+
 class coCache{
 public:
     coCache(HsaApiTable *apiTable) {apiTable_ = apiTable;}
@@ -100,13 +114,16 @@ public:
     bool setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented = true);
     uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
     uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
+    bool hasKernels();
 private:
     HsaApiTable *apiTable_;
     std::map<std::string, symbol_info_t> symbol_cache_;
     std::map<std::string,hsa_executable_t> cache_;
+    std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;
     std::vector<std::string> filelist_;
     std::mutex mutex_;
     std::string location_;
+    std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
 };
 
 class logDuration{
@@ -125,3 +142,4 @@ private:
 unsigned int getLogDurConfig(std::map<std::string, std::string>& config);
 void clipInstrumentedKernelName(std::string& str);
 void clipKernelName(std::string& str);
+bool isFileNewer(const std::chrono::system_clock::time_point& timestamp, const std::string& fileName);
