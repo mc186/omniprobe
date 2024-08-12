@@ -64,6 +64,8 @@ THE SOFTWARE.
 #include <hsa_api_trace.h>
 
 
+#define RH_PAGE_SIZE 0x1000
+#define RH_PAGE_MASK 0x0FFF
 
 using namespace std;
 
@@ -83,6 +85,22 @@ struct hsa_cmp
     {
         return first.handle < second.handle;
     }
+};
+
+class KernArgAllocator
+{
+public:
+    KernArgAllocator(HsaApiTable *pTable, std::ostream& out);
+    ~KernArgAllocator();
+    void *allocate(size_t size, hsa_agent_t allowed);
+    void *allocate(size_t size);
+    void free(void *ptr);
+    void setPool(hsa_amd_memory_pool_t pool) {pool_ = pool;}
+    std::ostream& out_;
+private:
+    hsa_amd_memory_pool_t pool_;
+    HsaApiTable *apiTable_;
+    hsa_agent_t agent;
 };
 
 class signalPool{

@@ -41,6 +41,17 @@ bool isFileNewer(const std::chrono::system_clock::time_point& timestamp, const s
     }
 }
 
+std::string getInstrumentedName(const std::string& func_decl) {
+    std::string result = func_decl;
+    size_t pos = result.find_last_of(')');
+    
+    if (pos != std::string::npos) {
+        result.replace(pos, 1, ", void*)");
+    }
+    
+    return result;
+}
+
 
 signalPool::signalPool(int initialSize/* = 8 */)
 {
@@ -154,11 +165,14 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
                     CHECK_STATUS("Unable to get valid symbol info", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym,HSA_EXECUTABLE_SYMBOL_INFO_TYPE,&kind));
                     if (kind == HSA_SYMBOL_KIND_KERNEL)
                     {
-                        auto it = kernels_.find(agent);
-                        if (it != kernels_.end())
-                            it->second.push_back(sym);
-                        else
-                            kernels_[agent].push_back(sym);
+                        {
+                            lock_guard<std::mutex> lock(mutex_);
+                            auto it = kernels_.find(agent);
+                            if (it != kernels_.end())
+                                it->second.push_back(sym);
+                            else
+                                kernels_[agent].push_back(sym);
+                        }
 
                         uint64_t kernel_object;
 
@@ -209,6 +223,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     // Read the environment variables
     const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
     const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
+    std::string strIntrumented(std::getenv("LOGDUR_INSTRUMENTED"));
 
     // If the environment variables are set, add them to the map
     if (logDurLogLocation) {
@@ -302,3 +317,50 @@ void clipInstrumentedKernelName(std::string& str) {
         str.resize(lastCommaPos + 1); // Resize the string to terminate after the parenthesis
     }
 }
+
+
+KernArgAllocator::KernArgAllocator(HsaApiTable *apiTable, ostream& out) : out_(out), apiTable_(apiTable)
+{
+    apiTable_->core_->hsa_iterate_agents_fn([](hsa_agent_t agent, void *data){
+        hsa_device_type_t type;
+        if (hsa_agent_get_info(agent,HSA_AGENT_INFO_DEVICE, &type) == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_CPU)
+        { 
+            hsa_amd_agent_iterate_memory_pools(agent, [](hsa_amd_memory_pool_t pool, void *data){
+                hsa_amd_segment_t segment;
+                uint32_t flags;
+                hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_SEGMENT, &segment);
+                if (HSA_AMD_SEGMENT_GLOBAL != segment)
+                    return HSA_STATUS_SUCCESS;
+                hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
+                if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_KERNARG_INIT)
+                    reinterpret_cast<KernArgAllocator *>(data)->setPool(pool);
+                return HSA_STATUS_SUCCESS;
+            }, data);
+        }
+        return HSA_STATUS_SUCCESS;
+    }, this);
+}
+
+void * KernArgAllocator::allocate(size_t size, hsa_agent_t allowed)
+{
+  uint8_t* buffer = NULL;
+  size = (size + RH_PAGE_MASK) & ~RH_PAGE_MASK;
+  auto status = hsa_amd_memory_pool_allocate(pool_, size, 0, reinterpret_cast<void**>(&buffer));
+  // Both the CPU and GPU can access the memory
+  if (status == HSA_STATUS_SUCCESS) {
+    status = hsa_amd_agents_allow_access(1, &allowed, NULL, buffer);
+  }
+  uint8_t* ptr = (status == HSA_STATUS_SUCCESS) ? buffer : NULL;
+  return ptr;
+}
+
+void KernArgAllocator::free(void *ptr)
+{
+    hsa_amd_memory_pool_free(ptr);
+}
+
+KernArgAllocator::~KernArgAllocator()
+{
+}
+    
+
