@@ -361,7 +361,9 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             {
                 uint64_t alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
+                {
                     dispatch->kernel_object = alt_kernel_object;
+                }
             }
         }
         pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue]};

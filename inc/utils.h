@@ -64,6 +64,9 @@ THE SOFTWARE.
 #include <hsa_api_trace.h>
 
 
+#define INSTRUMENTATION_BUFFER void *
+
+
 #define RH_PAGE_SIZE 0x1000
 #define RH_PAGE_MASK 0x0FFF
 
