@@ -142,6 +142,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     apiTable_ = table;
     getLogDurConfig(config_);
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
+    if (config_["LOGDUR_INSTRUMENTED"] == "true")
+        run_instrumented_ = true;
     //kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
@@ -359,7 +361,11 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             auto it = kernel_objects_.find(packet->kernel_object);
             if (it != kernel_objects_.end())
             {
-                uint64_t alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
+                uint64_t alt_kernel_object = 0;
+                if (run_instrumented_)
+                    alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_);
+                else
+                    alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
                 {
                     dispatch->kernel_object = alt_kernel_object;

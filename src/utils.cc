@@ -21,6 +21,7 @@ THE SOFTWARE.
 *******************************************************************************/
 
 #include "inc/utils.h"
+#include <algorithm>
 
 
 using namespace std;
@@ -258,9 +259,9 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
     return object;
 }
 
-uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name)
+uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t symbol, const std::string& name)
 {
-    return 0;
+    return findAlternative(symbol, getInstrumentedName(std::string(name)));
 }
 
 
@@ -285,7 +286,10 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     }
 
     if (logDurInstrumented) {
-        config["LOGDUR_INSTRUMENTED"] = "true";
+        std::string tmp = logDurInstrumented;
+        std::transform(tmp.begin(), tmp.end(), tmp.begin(),
+            [](unsigned char c){ return std::tolower(c); });
+        config["LOGDUR_INSTRUMENTED"] = tmp;
     }else {
         config["LOGDUR_INSTRUMENTED"] = "false";
     }

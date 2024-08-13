@@ -126,6 +126,7 @@ private:
     std::mutex mutex_;
     logDuration log_;
     coCache kernel_cache_;
+    bool run_instrumented_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;
