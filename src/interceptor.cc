@@ -354,7 +354,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         sig = sig_pool_.back();
         sig_pool_.pop_back();
         uint64_t alt_kernel_object;
-        if (kernel_cache_.hasKernels())
+        if (kernel_cache_.hasKernels(queues_[queue]))
         {
             auto it = kernel_objects_.find(packet->kernel_object);
             if (it != kernel_objects_.end())

@@ -26,6 +26,23 @@ THE SOFTWARE.
 using namespace std;
 namespace fs = std::filesystem;
 
+
+std::string demangleName(const char *name)
+{
+   int status;
+   std::string result;
+   char *realname = abi::__cxa_demangle(name, 0, 0, &status);
+   if (status == 0)
+   {
+       if (realname)
+       {
+           result = realname;
+           free(realname);
+       }
+   }
+   return result.length() ? result : std::string(name);
+}
+
 bool isFileNewer(const std::chrono::system_clock::time_point& timestamp, const std::string& fileName) {
     try {
         // Get the last write time of the file
@@ -82,10 +99,10 @@ coCache::~coCache()
     }
 }
 
-bool coCache::hasKernels()
+bool coCache::hasKernels(hsa_agent_t agent)
 {
     lock_guard<std::mutex> lock(mutex);
-    return kernels_.size() != 0;
+    return lookup_map_.find(agent) != lookup_map_.end();
     
 }
     
@@ -185,10 +202,15 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
 						{
 							name[length] = '\0';
 							CHECK_STATUS("Can't retrieve name from valid symbol", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name));
-							string strName = name;
+							string strName = demangleName(name);
                             cerr << "coCache: " << strName << std::endl;
+						    free(reinterpret_cast<void *>(name));
+                            auto it = lookup_map_.find(agent);
+                            if (it != lookup_map_.end())
+                                it->second[strName] = sym;
+                            else
+                                lookup_map_[agent] = {{strName,sym}};
 						}
-						free(reinterpret_cast<void *>(name));
                     }
                 }
 
@@ -223,7 +245,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     // Read the environment variables
     const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
     const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
-    std::string strIntrumented(std::getenv("LOGDUR_INSTRUMENTED"));
+    const char* logDurInstrumented = std::getenv("LOGDUR_INSTRUMENTED");
 
     // If the environment variables are set, add them to the map
     if (logDurLogLocation) {
@@ -236,6 +258,12 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
         config["LOGDUR_KERNEL_CACHE"] = std::string(logDurKernelCache);
     } else {
         config["LOGDUR_KERNEL_CACHE"] = "";  // Default or empty value if not set
+    }
+
+    if (logDurInstrumented) {
+        config["LOGDUR_INSTRUMENTED"] = "true";
+    }else {
+        config["LOGDUR_INSTRUMENTED"] = "false";
     }
 
     return config.size();

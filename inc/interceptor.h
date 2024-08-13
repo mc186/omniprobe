@@ -104,21 +104,6 @@ public:
         const packet_word_t* header = reinterpret_cast<const packet_word_t*>(packet);
         return static_cast<hsa_packet_type_t>((*header >> HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) & header_scacquire_scope_mask);
     }
-    static std::string demangleName(const char *name)
-    {
-       int status;
-       std::string result;
-       char *realname = abi::__cxa_demangle(name, 0, 0, &status);
-       if (status == 0)
-       {
-           if (realname)
-           {
-               result = realname;
-               free(realname);
-           }
-       }
-       return result;
-    }
     friend void signal_runner();
 protected:
     bool shuttingdown();
