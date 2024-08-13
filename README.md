@@ -22,7 +22,8 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
   - console
   - file name
   - /dev/null
-- LOGDUR_KERNEL_CACHE - The kernel cache should be pointed at a directory containing .hsaco files which represented alternative candidates
+- LOGDUR_KERNEL_CACHE
+  - The kernel cache should be pointed at a directory containing .hsaco files which represented alternative candidates
   to the kernels being dispatched by the application. If running "instrumented kernels" (see the next environment variable description), logDuration
   will look for an identically named kernel with the same parameter list and types, but with a single additional void * parameter (needed for the
   data streaming to the host from instrumented kernels.) If logDuration is not running in instrumented mode (e.g. LOGDUR_INSTRUMENTED = "false"),
