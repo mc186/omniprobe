@@ -124,7 +124,7 @@ typedef struct cache_object{
 
 class coCache{
 public:
-    coCache(HsaApiTable *apiTable) {apiTable_ = apiTable;}
+    coCache(HsaApiTable *apiTable);
     ~coCache();
     bool setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented = true);
     uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
@@ -138,6 +138,7 @@ private:
     std::mutex mutex_;
     std::string location_;
     std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
+    KernArgAllocator allocator_;
 };
 
 class logDuration{

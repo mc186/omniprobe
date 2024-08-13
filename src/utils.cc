@@ -89,6 +89,10 @@ void signalPool::checkin(hsa_signal_t sig)
     lock_guard<mutex> lock(mutex_);
 }
 
+coCache::coCache(HsaApiTable *apiTable) : allocator_(apiTable, std::cout)
+{
+    apiTable_ = apiTable;
+}
 
 coCache::~coCache()
 {
@@ -231,6 +235,23 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
     
 uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name)
 {
+    lock_guard<std::mutex> lock(mutex_);
+    hsa_agent_t agent;
+    uint32_t kernarg_size;
+    CHECK_STATUS("Unable to identify agent for symbol", hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_AGENT, reinterpret_cast<void *>(&agent)));
+    CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&kernarg_size)));
+    auto it = lookup_map_.find(agent);
+    if (it != lookup_map_.end())
+    {
+        auto kern_it = it->second.find(name);
+        if (kern_it != it->second.end())
+        {
+            uint32_t alt_kernarg_size;
+            uint64_t alt_kernel_object;
+            CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&alt_kernarg_size)));
+            CHECK_STATUS("Unable to get kernel_objeect", hsa_executable_symbol_get_info(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
+        }
+    }
     return 0;
 }
 
