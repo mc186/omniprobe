@@ -137,7 +137,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), kernel_cache_(table) 
+    dispatch_count_(0), signal_runner_(signal_runner), kernel_cache_(table), allocator_(table, std::cerr) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -236,6 +236,12 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         //cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
         //cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
+        auto ka_it = pending_kernargs_.find(sig);
+        if (ka_it != pending_kernargs_.end())
+        {
+            allocator_.free(ka_it->second);
+            pending_kernargs_.erase(sig);
+        }
         sig_pool_.push_back(sig);
     }
     else
@@ -369,6 +375,14 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 if (alt_kernel_object)
                 {
                     dispatch->kernel_object = alt_kernel_object;
+                    uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
+                    assert(size);
+                    void *new_kernargs = allocator_.allocate(size,queues_[queue]);
+                    assert(new_kernargs);
+                    memset(new_kernargs, 0, size);
+                    memcpy(new_kernargs, dispatch->kernarg_address, it->second.kernarg_size_);
+                    dispatch->kernarg_address = new_kernargs;
+                    pending_kernargs_[sig] = new_kernargs;
                 }
             }
         }
@@ -480,14 +494,14 @@ hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
 }
 
 
-void hsaInterceptor::addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent)
+void hsaInterceptor::addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent, uint32_t kernarg_size)
 {
    lock_guard<std::mutex> lock(mutex_);
    auto it = kernel_objects_.find(kernelObject);
    if (it == kernel_objects_.end())
    {
         std::string thisName = demangleName(name.c_str());
-        kernel_objects_[kernelObject] = {thisName.length() ? thisName : name, symbol, agent};
+        kernel_objects_[kernelObject] = {thisName.length() ? thisName : name, symbol, agent, kernarg_size};
    }
 }
  
@@ -508,9 +522,13 @@ hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbo
                     name[length] = '\0';
                     if ((*hsa_executable_symbol_get_info_fn)(symbol, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name) == HSA_STATUS_SUCCESS)
                     {
+                       uint32_t kernarg_size;
+                       CHECK_STATUS("Unable to get kernarg size", (*hsa_executable_symbol_get_info_fn)(symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&kernarg_size)));
                        uint64_t kernelObject = *reinterpret_cast<uint64_t *>(data);
                        string strName = name;
-                       getInstance()->addKernel(kernelObject, strName, symbol, {});
+                       hsa_agent_t agent;
+                       CHECK_STATUS("Unable to identify agent for symbol", (*hsa_executable_symbol_get_info_fn)(symbol, HSA_EXECUTABLE_SYMBOL_INFO_AGENT, reinterpret_cast<void *>(&agent)));
+                       getInstance()->addKernel(kernelObject, strName, symbol, agent, kernarg_size);
                     }
                     else
                     {

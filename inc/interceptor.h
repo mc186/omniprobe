@@ -61,6 +61,7 @@ typedef struct ld_kernel_descriptor {
     std::string name_;
     hsa_executable_symbol_t symbol_;
     hsa_agent_t agent_;
+    uint32_t kernarg_size_;
 }ld_kernel_descriptor_t;
 
 class hsaInterceptor {
@@ -72,7 +73,7 @@ private:
     void hookApi();
     void addQueue(hsa_queue_t *queue, hsa_agent_t agent);
     void removeQueue(hsa_queue_t *queue);
-    void addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent);
+    void addKernel(uint64_t kernelObject, std::string& name, hsa_executable_symbol_t symbol, hsa_agent_t agent, uint32_t kernarg_size);
     bool getPendingSignals(std::vector<hsa_signal_t>& outSigs);
     void signalCompleted(const hsa_signal_t sig);
     bool signalWait(hsa_signal_t sig, uint64_t timeout);
@@ -127,6 +128,8 @@ private:
     logDuration log_;
     coCache kernel_cache_;
     bool run_instrumented_;
+    KernArgAllocator allocator_;
+    std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> pending_kernargs_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;

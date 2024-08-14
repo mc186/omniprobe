@@ -90,7 +90,7 @@ void signalPool::checkin(hsa_signal_t sig)
     lock_guard<mutex> lock(mutex_);
 }
 
-coCache::coCache(HsaApiTable *apiTable) : allocator_(apiTable, std::cout)
+coCache::coCache(HsaApiTable *apiTable) 
 {
     apiTable_ = apiTable;
 }
@@ -233,6 +233,16 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
     }
     return filelist_.size() != 0;
 }
+
+uint32_t coCache::getArgSize(uint64_t kernel_object)
+{
+    uint32_t result = 0;
+    lock_guard<std::mutex> lock(mutex_);
+    auto it = kernarg_sizes_.find(kernel_object);
+    if (it != kernarg_sizes_.end())
+        result = it->second;
+    return result;
+}
     
 uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name)
 {
@@ -254,6 +264,9 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
             CHECK_STATUS("Unable to get kernel_object", hsa_executable_symbol_get_info(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
             object = alt_kernel_object;
             cout << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
+            auto ksit = kernarg_sizes_.find(alt_kernel_object);
+            if (ksit == kernarg_sizes_.end())
+                kernarg_sizes_[alt_kernel_object] = alt_kernarg_size;
         }
     }
     return object;

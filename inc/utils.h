@@ -133,6 +133,7 @@ public:
     uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
     uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
     bool hasKernels(hsa_agent_t agent);
+    uint32_t getArgSize(uint64_t kernel_object);
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;
@@ -141,7 +142,7 @@ private:
     std::mutex mutex_;
     std::string location_;
     std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
-    KernArgAllocator allocator_;
+    std::map<uint64_t, uint32_t> kernarg_sizes_;
 };
 
 class logDuration{
