@@ -221,6 +221,8 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
     {
         kernel_info_t ki = it->second;
         pending_signals_.erase(sig);
+        // If the application originally provided a completion_signal 
+        // We need to decrement it to ensure application behavior isn't affected.
         if (ki.signal_.handle)
         {
             // need to subtract here because that would have been done if we hadn't swapped signals
@@ -235,13 +237,17 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         log_.log(ki.name_, dispatchNs, startNs, endNs);
         //cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
         //cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
+        // Reinitialize signal value to 1 for use in next dispatch.
         (apiTable_->core_->hsa_signal_store_screlease_fn)(sig, 1);
+        // Look to see if we allocated an alternative kernarg  buffer  for this dispatch
         auto ka_it = pending_kernargs_.find(sig);
         if (ka_it != pending_kernargs_.end())
         {
+            // Free any alternative kernarg buffer we allocated.
             allocator_.free(ka_it->second);
             pending_kernargs_.erase(sig);
         }
+        //Put this completion signal back in the pool for subsequent dispatches
         sig_pool_.push_back(sig);
     }
     else
@@ -342,7 +348,15 @@ string hsaInterceptor::packetToText(const packet_t *packet)
     }
     return buff.str();
 }
-
+/*
+    This function is the core of functionality for logDuration. It's where completion signals are set up for tracking so that
+    at kernel completion we can extract start/stop times from the signal. It's also where "alternative" kernels - those found 
+    in the kernel cache pointed to by LOGDUR_KERNEL_CACHE - are used to replace the kernel_object in the dispatch packet with
+    the kernel cache alternative. Also, whenever replacing the original kernel_object with an alternative, this function 
+    allocates a new kernarg structure, initializes it to zeros, and copies the original kernarg buffer into the new one.
+    Pending signals and the alternative kernarg buffers are stored and processed later when the kernel completes and 
+    hsaIntereceptor::signalComplete is called.
+*/
 hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue)
 {
     hsa_kernel_dispatch_packet_t *dispatch = new hsa_kernel_dispatch_packet_t;
@@ -350,6 +364,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
     {
         lock_guard<std::mutex> lock(mutex_);
         hsa_signal_t sig;
+        // If we're out of signals to use grow the pool.
         if (!sig_pool_.size())
         {
             for (int i = 0; i < SIGPOOL_INCREMENT; i++)
@@ -362,31 +377,44 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         sig = sig_pool_.back();
         sig_pool_.pop_back();
         uint64_t alt_kernel_object;
+        // Are there any kernels in the cache?
         if (kernel_cache_.hasKernels(queues_[queue]))
         {
             auto it = kernel_objects_.find(packet->kernel_object);
             if (it != kernel_objects_.end())
             {
                 uint64_t alt_kernel_object = 0;
+                // If we're running in instrumented mode, we're looking for a certain kernel naming convention along with
+                // an argument list expanded by a single void *
                 if (run_instrumented_)
                     alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_);
                 else
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
                 {
+                    // Found a kernel object to use as an alternative
                     dispatch->kernel_object = alt_kernel_object;
+                    // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
-                    assert(size);
-                    void *new_kernargs = allocator_.allocate(size,queues_[queue]);
-                    assert(new_kernargs);
-                    memset(new_kernargs, 0, size);
-                    memcpy(new_kernargs, dispatch->kernarg_address, it->second.kernarg_size_);
-                    dispatch->kernarg_address = new_kernargs;
-                    pending_kernargs_[sig] = new_kernargs;
+                    // Has to be at least sizeof(void *) if we picked an instrumented kernel
+                    if (run_instrumented_)
+                    {
+                        assert(size);
+                        void *new_kernargs = allocator_.allocate(size,queues_[queue]);
+                        assert(new_kernargs);
+                        memset(new_kernargs, 0, size);
+                        memcpy(new_kernargs, dispatch->kernarg_address, it->second.kernarg_size_);
+                        dispatch->kernarg_address = new_kernargs;
+                        // Store the kernarg address so we can free it up at kernel completion
+                        pending_kernargs_[sig] = new_kernargs;
+                    }
                 }
             }
         }
+        // Store the signal for processing at kernel completion
         pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue]};
+        //replace any pre-existing completion_signal in the dispatch. FWIW, normal HIP/ROCm codes don't use dispatch packet
+        //completion signals. The typically enqueue a barrier packet immediately following a kernel dispatch packet.
         dispatch->completion_signal = sig;
         dispatch_count_++;
 
