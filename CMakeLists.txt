@@ -37,11 +37,16 @@ include(utils)
 
 get_version("1.0.0")
 
-set(ROCM_PATH "/opt/rocm")
+if(DEFINED ENV{ROCM_PATH})
+    set(ROCM_PATH $ENV{ROCM_PATH})
+else()
+    # Set a default value if FOO_PATH is not set
+    set(ROCM_PATH "/opt/rocm")
+endif()
 
 message("ROCM_PATH: ${ROCM_PATH}")
 
-set(clang "/opt/rocm/llvm/bin/clang")
+set(clang "${ROCM_PATH}/llvm/bin/clang")
 
 find_program(
     HIPCC_EXECUTABLE
