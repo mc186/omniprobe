@@ -341,7 +341,7 @@ logDuration::~logDuration()
 void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs)
 {
     if (log_file_)
-        *log_file_ << kernelName << "," << std::dec << dispatchTime << "," << startNs << "," << endNs << std::endl;
+        *log_file_ << "\"" << kernelName << "\"," << std::dec << dispatchTime << "," << startNs << "," << endNs << std::endl;
     else
         cerr << "Can't find anyplace to log\n";
 }
