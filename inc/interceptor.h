@@ -21,6 +21,7 @@
 
 class hsaInterceptor;
 void signal_runner();
+void cache_watcher();
 
 #define PUBLIC_API __attribute__((visibility("default")))
 #define CONSTRUCTOR_API __attribute__((constructor))
@@ -106,9 +107,11 @@ public:
         return static_cast<hsa_packet_type_t>((*header >> HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) & header_scacquire_scope_mask);
     }
     friend void signal_runner();
+    friend void cache_watcher();
 protected:
     bool shuttingdown();
     void shutdown();
+    std::string getCacheLocation() { return config_["LOGDUR_KERNEL_CACHE"];}
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_queue_t *, std::pair<unsigned int, uint64_t>> queue_ids_;
@@ -124,6 +127,7 @@ private:
     uint64_t dispatch_count_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;
+    std::thread cache_watcher_;
     std::mutex mutex_;
     logDuration log_;
     coCache kernel_cache_;

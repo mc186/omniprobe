@@ -38,6 +38,7 @@ THE SOFTWARE.
 #include <sys/syscall.h>   /* For SYS_xxx definitions */
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <sys/inotify.h>
 #include <unistd.h>
 #include <limits.h>
 
@@ -137,7 +138,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), kernel_cache_(table), allocator_(table, std::cerr) 
+    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -254,6 +255,76 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
     {
         cerr << "Some big problem occurred, a pending signal is missing\n";
     }
+}
+
+void cache_watcher()
+{
+    hsaInterceptor *me = hsaInterceptor::getInstance();
+    std::string dir = me->getCacheLocation();
+	int fd = inotify_init();
+    if (fd < 0)
+    {
+        perror("inotify_init");
+        exit(EXIT_FAILURE);
+    }
+
+    int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+    if (wd == -1)
+    {
+        fprintf(stderr, "Cannot watch '%s': %s\n", dir.c_str(), strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        printf("Watching directory '%s' for changes.\n", dir.c_str());
+    }
+    while (!me->shuttingdown())
+    {
+		const size_t event_size = sizeof(struct inotify_event);
+    	const size_t buf_len = 1024 * (event_size + 16);
+    	char buffer[buf_len];
+
+        int length = read(fd, buffer, buf_len);
+        if (length < 0)
+        {
+            perror("read");
+            exit(EXIT_FAILURE);
+        }
+
+        int i = 0;
+        while (i < length)
+        {
+            struct inotify_event* event = (struct inotify_event*)&buffer[i];
+
+            if (event->len)
+            {
+                if (event->mask & IN_CREATE)
+                {
+                    //printf("The file %s was created in directory %s.\n", event->name, dir);
+                }
+                else if (event->mask & IN_DELETE)
+                {
+                    //printf("The file %s was deleted from directory %s.\n", event->name, dir);
+                }
+                else if (event->mask & IN_MODIFY)
+                {
+                    //printf("The file %s was modified in directory %s.\n", event->name, dir);
+                }
+                else if (event->mask & IN_MOVED_FROM)
+                {
+                    //printf("The file %s was moved out of directory %s.\n", event->name, dir);
+                }
+                else if (event->mask & IN_MOVED_TO)
+                {
+                    //printf("The file %s was moved into directory %s.\n", event->name, dir);
+                }
+            }
+
+            i += event_size + event->len;
+        }
+	}
+	inotify_rm_watch(fd, wd);
+    close(fd);
 }
 
 void signal_runner()

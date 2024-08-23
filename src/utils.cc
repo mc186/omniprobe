@@ -110,6 +110,105 @@ bool coCache::hasKernels(hsa_agent_t agent)
     return lookup_map_.find(agent) != lookup_map_.end();
     
 }
+
+bool coCache::addFile(const std::string& name, hsa_agent_t agent)
+{
+    bool bResult = false;
+    // Build the code object filename
+    std::clog << "Code object filename: " << name << std::endl;
+
+    // Open the file containing code object
+    hsa_file_t file_handle = open(name.c_str(), O_RDONLY);
+    if (file_handle == -1) {
+        std::cerr << "Error: failed to load '" << name << "'" << std::endl;
+        assert(false);
+        return false;
+    }
+
+    // Create code object reader
+    hsa_code_object_reader_t code_obj_rdr = {0};
+    hsa_status_t status = apiTable_->core_->hsa_code_object_reader_create_from_file_fn(file_handle, &code_obj_rdr);
+    if (status != HSA_STATUS_SUCCESS) {
+        std::cerr << "Failed to create code object reader '" << name << "'" << std::endl;
+        return false;
+    }
+
+    // Create executable.
+    hsa_executable_t executable;
+    status = apiTable_->core_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
+                                         NULL, &executable);
+    CHECK_STATUS("Error in creating executable object", status);
+
+    // Load code object.
+    status = apiTable_->core_->hsa_executable_load_agent_code_object_fn(executable, agent, code_obj_rdr,
+                                                     NULL, NULL);
+    if (status == HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS)
+    {
+        cerr << "Looks like " << name << " is not ISA compatible with this GPU\n";
+        apiTable_->core_->hsa_executable_destroy_fn(executable);
+        return false;
+    }
+    else
+        CHECK_STATUS("Error in loading executable object", status);
+
+    // Freeze executable.
+    status = apiTable_->core_->hsa_executable_freeze_fn(executable, "");
+    CHECK_STATUS("Error in freezing executable object", status);
+
+    // Get symbol handle.
+    hsa_executable_symbol_t kernelSymbol;
+    std::vector<hsa_executable_symbol_t> symbols;
+    status = apiTable_->core_->hsa_executable_iterate_symbols_fn(executable, [](hsa_executable_t exec, hsa_executable_symbol_t symbol, void *data){
+        std::vector<hsa_executable_symbol_t> *syms = reinterpret_cast<std::vector<hsa_executable_symbol_t> *>(data);
+        syms->push_back(symbol);
+        return HSA_STATUS_SUCCESS;
+    }, reinterpret_cast<void *>(&symbols));
+
+    cerr << "coCache found " << symbols.size() << " symbols\n";
+    for (auto sym : symbols)
+    {
+        hsa_symbol_kind_t kind;
+        CHECK_STATUS("Unable to get valid symbol info", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym,HSA_EXECUTABLE_SYMBOL_INFO_TYPE,&kind));
+        if (kind == HSA_SYMBOL_KIND_KERNEL)
+        {
+            {
+                lock_guard<std::mutex> lock(mutex_);
+                auto it = kernels_.find(agent);
+                if (it != kernels_.end())
+                    it->second.push_back(sym);
+                else
+                    kernels_[agent].push_back(sym);
+            }
+
+            uint64_t kernel_object;
+
+            CHECK_STATUS("Can't retrieve a kernel object from a valid symbol", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&kernel_object)));
+            uint32_t length;
+            CHECK_STATUS("Can't retrieve the length of kernel name from a valid symbol", 
+                apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH,&length));
+            char *name = reinterpret_cast<char *>(malloc(length + 1));
+            if (name)
+            {
+                name[length] = '\0';
+                CHECK_STATUS("Can't retrieve name from valid symbol", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name));
+                string strName = demangleName(name);
+                cerr << "coCache: " << strName << std::endl;
+                free(reinterpret_cast<void *>(name));
+                auto it = lookup_map_.find(agent);
+                if (it != lookup_map_.end())
+                    it->second[strName] = sym;
+                else
+                    lookup_map_[agent] = {{strName,sym}};
+            }
+        }
+    }
+    {
+        lock_guard<std::mutex> lock(mutex_);
+        cache_objects_[agent] = {executable, name, std::chrono::system_clock::now()};
+    }
+    close(file_handle);
+    return bResult;
+}
     
 bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented)
 {

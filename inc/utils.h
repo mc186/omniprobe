@@ -134,6 +134,7 @@ public:
     uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
     bool hasKernels(hsa_agent_t agent);
     uint32_t getArgSize(uint64_t kernel_object);
+    bool addFile(const std::string& name, hsa_agent_t agent);
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;
