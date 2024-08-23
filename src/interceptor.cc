@@ -172,15 +172,16 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                     }
                 }
             }
-    std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
-    for (auto agent : gpus)
-        kernel_cache_.setLocation(agent, cacheLocation);
+    //std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
+    //for (auto agent : gpus)
+    //    kernel_cache_.setLocation(agent, cacheLocation);
 
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
     cerr << "Joining the signal runner\n";
     signal_runner_.join();
+    cache_watcher_.join();
     // Join signal processing thread here
     lock_guard<std::mutex> lock(mutex_);
     for (auto sig : sig_pool_)
@@ -271,8 +272,10 @@ void cache_watcher()
     int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
     if (wd == -1)
     {
-        fprintf(stderr, "Cannot watch '%s': %s\n", dir.c_str(), strerror(errno));
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Cannot use '%s' as a kernel cache: %s\n", dir.c_str(), strerror(errno));
+        close(fd);
+        while (!me->shuttingdown())
+            usleep(1000);
     }
     else
     {
