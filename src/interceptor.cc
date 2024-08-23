@@ -39,6 +39,7 @@ THE SOFTWARE.
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/inotify.h>
+#include <sys/select.h>
 #include <unistd.h>
 #include <limits.h>
 
@@ -286,44 +287,60 @@ void cache_watcher()
 		const size_t event_size = sizeof(struct inotify_event);
     	const size_t buf_len = 1024 * (event_size + 16);
     	char buffer[buf_len];
-
-        int length = read(fd, buffer, buf_len);
-        if (length < 0)
+        fd_set rfds;
+        struct timeval tv;
+        int retval;
+        tv.tv_sec = 0;
+        tv.tv_usec = 10000;
+        FD_ZERO(&rfds);
+        FD_SET(fd, &rfds);
+        retval = select(fd + 1, &rfds, NULL, NULL, &tv);
+        if (retval != -1)
         {
-            perror("read");
-            exit(EXIT_FAILURE);
-        }
-
-        int i = 0;
-        while (i < length)
-        {
-            struct inotify_event* event = (struct inotify_event*)&buffer[i];
-
-            if (event->len)
+            if (retval)
             {
-                if (event->mask & IN_CREATE)
+                if (FD_ISSET(fd, &rfds))
                 {
-                    //printf("The file %s was created in directory %s.\n", event->name, dir);
-                }
-                else if (event->mask & IN_DELETE)
-                {
-                    //printf("The file %s was deleted from directory %s.\n", event->name, dir);
-                }
-                else if (event->mask & IN_MODIFY)
-                {
-                    //printf("The file %s was modified in directory %s.\n", event->name, dir);
-                }
-                else if (event->mask & IN_MOVED_FROM)
-                {
-                    //printf("The file %s was moved out of directory %s.\n", event->name, dir);
-                }
-                else if (event->mask & IN_MOVED_TO)
-                {
-                    //printf("The file %s was moved into directory %s.\n", event->name, dir);
+                    int length = read(fd, buffer, buf_len);
+                    if (length < 0)
+                    {
+                        perror("read");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    int i = 0;
+                    while (i < length)
+                    {
+                        struct inotify_event* event = (struct inotify_event*)&buffer[i];
+
+                        if (event->len)
+                        {
+                            if (event->mask & IN_CREATE)
+                            {
+                                //printf("The file %s was created in directory %s.\n", event->name, dir);
+                            }
+                            else if (event->mask & IN_DELETE)
+                            {
+                                //printf("The file %s was deleted from directory %s.\n", event->name, dir);
+                            }
+                            else if (event->mask & IN_MODIFY)
+                            {
+                                //printf("The file %s was modified in directory %s.\n", event->name, dir);
+                            }
+                            else if (event->mask & IN_MOVED_FROM)
+                            {
+                                //printf("The file %s was moved out of directory %s.\n", event->name, dir);
+                            }
+                            else if (event->mask & IN_MOVED_TO)
+                            {
+                                //printf("The file %s was moved into directory %s.\n", event->name, dir);
+                            }
+                        }
+
+                        i += event_size + event->len;
+                    }
                 }
             }
-
-            i += event_size + event->len;
         }
 	}
 	inotify_rm_watch(fd, wd);

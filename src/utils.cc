@@ -228,6 +228,8 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
 
             for (auto file : filelist_)
             {
+                addFile(file, agent);
+                /*
                 cout << "coCache::filelist_: " << file << std::endl;
             
                 hsa_status_t status = HSA_STATUS_ERROR;
@@ -325,7 +327,7 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
                     lock_guard<std::mutex> lock(mutex_);
                     cache_objects_[agent] = {executable, file, std::chrono::system_clock::now()};
                 }
-                close(file_handle);
+                close(file_handle);*/
             }
         } catch (const fs::filesystem_error& e) {
             std::cerr << "Filesystem error: " << e.what() << std::endl;
