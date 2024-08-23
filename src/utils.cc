@@ -194,11 +194,14 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
                 string strName = demangleName(name);
                 cerr << "coCache: " << strName << std::endl;
                 free(reinterpret_cast<void *>(name));
-                auto it = lookup_map_.find(agent);
-                if (it != lookup_map_.end())
-                    it->second[strName] = sym;
-                else
-                    lookup_map_[agent] = {{strName,sym}};
+                {
+                    lock_guard<std::mutex> lock(mutex_);
+                    auto it = lookup_map_.find(agent);
+                    if (it != lookup_map_.end())
+                        it->second[strName] = sym;
+                    else
+                        lookup_map_[agent] = {{strName,sym}};
+                }
             }
         }
     }
