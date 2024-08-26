@@ -196,6 +196,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
                 free(reinterpret_cast<void *>(name));
                 {
                     lock_guard<std::mutex> lock(mutex_);
+                    cout << "Adding kernel " << strName << std::endl;
                     auto it = lookup_map_.find(agent);
                     if (it != lookup_map_.end())
                         it->second[strName] = sym;

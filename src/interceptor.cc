@@ -40,6 +40,7 @@ THE SOFTWARE.
 #include <sys/mman.h>
 #include <sys/inotify.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <limits.h>
 
@@ -70,6 +71,7 @@ THE SOFTWARE.
 
 
 using namespace std;
+namespace fs = std::filesystem;
 
 int PID = getpid();
 
@@ -263,11 +265,25 @@ void cache_watcher()
 {
     hsaInterceptor *me = hsaInterceptor::getInstance();
     std::string dir = me->getCacheLocation();
+    std::map<int, std::string> watch_map;
 	int fd = inotify_init();
     if (fd < 0)
     {
         perror("inotify_init");
         exit(EXIT_FAILURE);
+    }
+    
+    for (const auto& entry : fs::directory_iterator(dir)) 
+    {
+        if (entry.is_directory()) 
+        {
+            int wd = inotify_add_watch(fd, entry.path().string().c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+            if (wd != -1)
+            {
+                watch_map[wd] = entry.path().string();
+                cerr << "Added " << entry.path().string() << " to watch list\n";
+            }
+        }
     }
 
     int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
@@ -280,6 +296,7 @@ void cache_watcher()
     }
     else
     {
+        watch_map[wd] = dir.c_str();
         printf("Watching directory '%s' for changes.\n", dir.c_str());
     }
     while (!me->shuttingdown())
@@ -294,7 +311,7 @@ void cache_watcher()
         tv.tv_usec = 10000;
         FD_ZERO(&rfds);
         FD_SET(fd, &rfds);
-        retval = select(fd + 1, &rfds, NULL, NULL, &tv);
+        retval = select(fd+1, &rfds, NULL, NULL, &tv);
         if (retval != -1)
         {
             if (retval)
@@ -317,7 +334,20 @@ void cache_watcher()
                         {
                             if (event->mask & IN_CREATE)
                             {
-                                //printf("The file %s was created in directory %s.\n", event->name, dir);
+                                struct stat path_stat;
+                                stat(event->name, &path_stat);
+                                std::string strNewDirectory = dir;
+                                strNewDirectory += event->name;
+                                if (S_ISDIR(path_stat.st_mode)) {
+                                    int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+                                    if (wd != -1)
+                                        watch_map[wd] = event->name;
+                                }
+                                else if (strNewDirectory.ends_with(".hsaco"))
+                                {
+                                    cerr << "New code object to process";
+                                }
+                                cerr << "The file/directory " << event->name << "was created in directory " << watch_map[event->wd] << std::endl;
                             }
                             else if (event->mask & IN_DELETE)
                             {
@@ -325,6 +355,7 @@ void cache_watcher()
                             }
                             else if (event->mask & IN_MODIFY)
                             {
+                                cerr << "The file/directory " << event->name << "was modified in directory " << watch_map[event->wd] << std::endl;
                                 //printf("The file %s was modified in directory %s.\n", event->name, dir);
                             }
                             else if (event->mask & IN_MOVED_FROM)
@@ -333,6 +364,14 @@ void cache_watcher()
                             }
                             else if (event->mask & IN_MOVED_TO)
                             {
+                                std::string strFileName = watch_map[event->wd];
+                                strFileName += event->name;
+                                if (strFileName.ends_with(".hsaco"))
+                                {
+                                    cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
+                                }
+                                else
+                                    cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
                                 //printf("The file %s was moved into directory %s.\n", event->name, dir);
                             }
                         }
@@ -342,6 +381,8 @@ void cache_watcher()
                 }
             }
         }
+        else
+            cerr << "Bug in monitoring kernel cache\n";
 	}
 	inotify_rm_watch(fd, wd);
     close(fd);
