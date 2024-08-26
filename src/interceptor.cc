@@ -192,6 +192,29 @@ hsaInterceptor::~hsaInterceptor() {
     restoreHsaApi();
 }
 
+bool hsaInterceptor::addCodeObject(const std::string& name)
+{
+    std::vector<hsa_agent_t> gpus;
+    if (hsa_iterate_agents ([](hsa_agent_t agent, void *data){
+                    std::vector<hsa_agent_t> *agents  = reinterpret_cast<std::vector<hsa_agent_t> *>(data);
+                    hsa_device_type_t type;
+                    hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, static_cast<void *>(&type));
+                    if (status == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_GPU)
+                        agents->emplace_back(agent);
+                    return HSA_STATUS_SUCCESS;
+                }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
+    {
+        if (name.length())
+        {
+            for (auto agent : gpus)
+            {
+                kernel_cache_.addFile(name, agent);
+            }
+        }
+    }
+    return true;
+}
+
 decltype(hsa_queue_create)* hsa_queue_create_fn;
 decltype(hsa_queue_destroy)* hsa_queue_destroy_fn;
 decltype(hsa_amd_queue_intercept_create)* hsa_amd_queue_intercept_create_fn;
@@ -263,129 +286,138 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
 
 void cache_watcher()
 {
+    cerr << "Cache Watcher\n";;
     hsaInterceptor *me = hsaInterceptor::getInstance();
     std::string dir = me->getCacheLocation();
-    std::map<int, std::string> watch_map;
-	int fd = inotify_init();
-    if (fd < 0)
+    if (dir.length())
     {
-        perror("inotify_init");
-        exit(EXIT_FAILURE);
-    }
-    
-    for (const auto& entry : fs::directory_iterator(dir)) 
-    {
-        if (entry.is_directory()) 
+        std::map<int, std::string> watch_map;
+        int fd = inotify_init();
+        if (fd < 0)
         {
-            int wd = inotify_add_watch(fd, entry.path().string().c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
-            if (wd != -1)
-            {
-                watch_map[wd] = entry.path().string();
-                cerr << "Added " << entry.path().string() << " to watch list\n";
-            }
+            perror("inotify_init");
+            exit(EXIT_FAILURE);
         }
-    }
-
-    int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
-    if (wd == -1)
-    {
-        fprintf(stderr, "Cannot use '%s' as a kernel cache: %s\n", dir.c_str(), strerror(errno));
-        close(fd);
-        while (!me->shuttingdown())
-            usleep(1000);
-    }
-    else
-    {
-        watch_map[wd] = dir.c_str();
-        printf("Watching directory '%s' for changes.\n", dir.c_str());
-    }
-    while (!me->shuttingdown())
-    {
-		const size_t event_size = sizeof(struct inotify_event);
-    	const size_t buf_len = 1024 * (event_size + 16);
-    	char buffer[buf_len];
-        fd_set rfds;
-        struct timeval tv;
-        int retval;
-        tv.tv_sec = 0;
-        tv.tv_usec = 10000;
-        FD_ZERO(&rfds);
-        FD_SET(fd, &rfds);
-        retval = select(fd+1, &rfds, NULL, NULL, &tv);
-        if (retval != -1)
+        
+        for (const auto& entry : fs::directory_iterator(dir)) 
         {
-            if (retval)
+            if (entry.is_directory()) 
             {
-                if (FD_ISSET(fd, &rfds))
+                int wd = inotify_add_watch(fd, entry.path().string().c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+                if (wd != -1)
                 {
-                    int length = read(fd, buffer, buf_len);
-                    if (length < 0)
-                    {
-                        perror("read");
-                        exit(EXIT_FAILURE);
-                    }
-
-                    int i = 0;
-                    while (i < length)
-                    {
-                        struct inotify_event* event = (struct inotify_event*)&buffer[i];
-
-                        if (event->len)
-                        {
-                            if (event->mask & IN_CREATE)
-                            {
-                                struct stat path_stat;
-                                stat(event->name, &path_stat);
-                                std::string strNewDirectory = dir;
-                                strNewDirectory += event->name;
-                                if (S_ISDIR(path_stat.st_mode)) {
-                                    int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
-                                    if (wd != -1)
-                                        watch_map[wd] = event->name;
-                                }
-                                else if (strNewDirectory.ends_with(".hsaco"))
-                                {
-                                    cerr << "New code object to process";
-                                }
-                                cerr << "The file/directory " << event->name << "was created in directory " << watch_map[event->wd] << std::endl;
-                            }
-                            else if (event->mask & IN_DELETE)
-                            {
-                                //printf("The file %s was deleted from directory %s.\n", event->name, dir);
-                            }
-                            else if (event->mask & IN_MODIFY)
-                            {
-                                cerr << "The file/directory " << event->name << "was modified in directory " << watch_map[event->wd] << std::endl;
-                                //printf("The file %s was modified in directory %s.\n", event->name, dir);
-                            }
-                            else if (event->mask & IN_MOVED_FROM)
-                            {
-                                //printf("The file %s was moved out of directory %s.\n", event->name, dir);
-                            }
-                            else if (event->mask & IN_MOVED_TO)
-                            {
-                                std::string strFileName = watch_map[event->wd];
-                                strFileName += event->name;
-                                if (strFileName.ends_with(".hsaco"))
-                                {
-                                    cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
-                                }
-                                else
-                                    cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
-                                //printf("The file %s was moved into directory %s.\n", event->name, dir);
-                            }
-                        }
-
-                        i += event_size + event->len;
-                    }
+                    watch_map[wd] = entry.path().string();
+                    cerr << "Added " << entry.path().string() << " to watch list\n";
                 }
             }
         }
+
+        int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+        if (wd == -1)
+        {
+            fprintf(stderr, "Cannot use '%s' as a kernel cache: %s\n", dir.c_str(), strerror(errno));
+            close(fd);
+            while (!me->shuttingdown())
+                usleep(1000);
+        }
         else
-            cerr << "Bug in monitoring kernel cache\n";
-	}
-	inotify_rm_watch(fd, wd);
-    close(fd);
+        {
+            watch_map[wd] = dir.c_str();
+            printf("Watching directory '%s' for changes.\n", dir.c_str());
+        }
+        while (!me->shuttingdown())
+        {
+            const size_t event_size = sizeof(struct inotify_event);
+            const size_t buf_len = 1024 * (event_size + 16);
+            char buffer[buf_len];
+            fd_set rfds;
+            struct timeval tv;
+            int retval;
+            tv.tv_sec = 0;
+            tv.tv_usec = 10000;
+            FD_ZERO(&rfds);
+            FD_SET(fd, &rfds);
+            retval = select(fd+1, &rfds, NULL, NULL, &tv);
+            if (retval != -1)
+            {
+                if (retval)
+                {
+                    if (FD_ISSET(fd, &rfds))
+                    {
+                        int length = read(fd, buffer, buf_len);
+                        if (length < 0)
+                        {
+                            perror("read");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        int i = 0;
+                        while (i < length)
+                        {
+                            struct inotify_event* event = (struct inotify_event*)&buffer[i];
+
+                            if (event->len)
+                            {
+                                if (event->mask & IN_CREATE)
+                                {
+                                    struct stat path_stat;
+                                    stat(event->name, &path_stat);
+                                    std::string strNewDirectory = dir;
+                                    strNewDirectory += event->name;
+                                    if (S_ISDIR(path_stat.st_mode)) {
+                                        int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+                                        if (wd != -1)
+                                            watch_map[wd] = event->name;
+                                    }
+                                    else if (strNewDirectory.ends_with(".hsaco"))
+                                    {
+                                        cerr << "New code object to process";
+                                    }
+                                    cerr << "The file/directory " << event->name << "was created in directory " << watch_map[event->wd] << std::endl;
+                                }
+                                else if (event->mask & IN_DELETE)
+                                {
+                                    //printf("The file %s was deleted from directory %s.\n", event->name, dir);
+                                }
+                                else if (event->mask & IN_MODIFY)
+                                {
+                                    cerr << "The file/directory " << event->name << "was modified in directory " << watch_map[event->wd] << std::endl;
+                                    //printf("The file %s was modified in directory %s.\n", event->name, dir);
+                                }
+                                else if (event->mask & IN_MOVED_FROM)
+                                {
+                                    //printf("The file %s was moved out of directory %s.\n", event->name, dir);
+                                }
+                                else if (event->mask & IN_MOVED_TO)
+                                {
+                                    std::string strFileName = watch_map[event->wd];
+                                    strFileName += event->name;
+                                    if (strFileName.ends_with(".hsaco"))
+                                    {
+                                        cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
+                                    }
+                                    else
+                                        cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
+                                    //printf("The file %s was moved into directory %s.\n", event->name, dir);
+                                }
+                            }
+
+                            i += event_size + event->len;
+                        }
+                    }
+                }
+            }
+            else
+                cerr << "Bug in monitoring kernel cache\n";
+        }
+        inotify_rm_watch(fd, wd);
+        close(fd);
+    }
+    else
+    {
+        while (!me->shuttingdown())
+            usleep(1000);
+    }
 }
 
 void signal_runner()

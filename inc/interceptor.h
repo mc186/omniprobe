@@ -112,6 +112,7 @@ protected:
     bool shuttingdown();
     void shutdown();
     std::string getCacheLocation() { return config_["LOGDUR_KERNEL_CACHE"];}
+    bool addCodeObject(const std::string& name);
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_queue_t *, std::pair<unsigned int, uint64_t>> queue_ids_;
