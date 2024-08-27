@@ -175,10 +175,6 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                     }
                 }
             }
-    //std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
-    //for (auto agent : gpus)
-    //    kernel_cache_.setLocation(agent, cacheLocation);
-
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
@@ -391,10 +387,12 @@ void cache_watcher()
                                 else if (event->mask & IN_MOVED_TO)
                                 {
                                     std::string strFileName = watch_map[event->wd];
+                                    strFileName += "/";
                                     strFileName += event->name;
                                     if (strFileName.ends_with(".hsaco"))
                                     {
                                         cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
+                                        me->addCodeObject(strFileName);                                        
                                     }
                                     else
                                         cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
@@ -418,6 +416,7 @@ void cache_watcher()
         while (!me->shuttingdown())
             usleep(1000);
     }
+    cerr << "Cache Watcher shutting down\n";
 }
 
 void signal_runner()
@@ -556,6 +555,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
                 {
+                    cerr << "Using alternative kernel\n";
                     // Found a kernel object to use as an alternative
                     dispatch->kernel_object = alt_kernel_object;
                     // What's the kernarg buffer size for this new kernel?
@@ -573,6 +573,8 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         pending_kernargs_[sig] = new_kernargs;
                     }
                 }
+                else
+                    cerr << "No alternative kernel\n";
             }
         }
         // Store the signal for processing at kernel completion

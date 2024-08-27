@@ -348,15 +348,17 @@ uint32_t coCache::getArgSize(uint64_t kernel_object)
         result = it->second;
     return result;
 }
+
+extern decltype(hsa_executable_symbol_get_info)* hsa_executable_symbol_get_info_fn;
     
 uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name)
 {
     uint64_t object = 0;
-    lock_guard<std::mutex> lock(mutex_);
     hsa_agent_t agent;
     uint32_t kernarg_size;
-    CHECK_STATUS("Unable to identify agent for symbol", hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_AGENT, reinterpret_cast<void *>(&agent)));
-    CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info(symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&kernarg_size)));
+    CHECK_STATUS("Unable to identify agent for symbol", hsa_executable_symbol_get_info_fn(symbol, HSA_EXECUTABLE_SYMBOL_INFO_AGENT, reinterpret_cast<void *>(&agent)));
+    CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info_fn(symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&kernarg_size)));
+    lock_guard<std::mutex> lock(mutex_);
     auto it = lookup_map_.find(agent);
     if (it != lookup_map_.end())
     {
@@ -365,8 +367,8 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
         {
             uint32_t alt_kernarg_size;
             uint64_t alt_kernel_object;
-            CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&alt_kernarg_size)));
-            CHECK_STATUS("Unable to get kernel_object", hsa_executable_symbol_get_info(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
+            CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&alt_kernarg_size)));
+            CHECK_STATUS("Unable to get kernel_object", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
             object = alt_kernel_object;
             cout << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
             auto ksit = kernarg_sizes_.find(alt_kernel_object);
