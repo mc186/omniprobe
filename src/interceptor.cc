@@ -148,6 +148,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
     if (config_["LOGDUR_INSTRUMENTED"] == "true")
         run_instrumented_ = true;
+    else
+        run_instrumented_ = false;
     //kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {

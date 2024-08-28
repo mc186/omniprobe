@@ -66,6 +66,12 @@ std::string getInstrumentedName(const std::string& func_decl) {
     if (pos != std::string::npos) {
         result.replace(pos, 1, ", void*)");
     }
+    else
+    {
+        pos = result.find_last_of(".");
+        if (pos != std::string::npos)
+        result.replace(pos, 1, "Pv.kd");
+    }
     
     return result;
 }
