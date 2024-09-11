@@ -55,6 +55,9 @@ function(generate_hsaco TARGET_ID INPUT_FILE OUTPUT_FILE)
 endfunction(generate_hsaco)
 
 set(GPU_LIST "gfx900" "gfx906" "gfx908" "gfx90a" "gfx942" "gfx1030" "gfx1031" "gfx1032" "gfx1100" "gfx1101" "gfx1102")
+# Create test_kernels directory if it doesn't exist
+file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/test_kernels)
+# Run generate_hsaco for each target
 foreach(target_id ${GPU_LIST})
     # generate kernel bitcodes
     message("${CMAKE_CURRENT_SOURCE_DIR}")
