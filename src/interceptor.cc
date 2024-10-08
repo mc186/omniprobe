@@ -115,6 +115,8 @@ void hsaInterceptor::OnSubmitPackets(const void* in_packets, uint64_t count,
         hsa_queue_t *queue = reinterpret_cast<hsa_queue_t *>(data);
         hook->doPackets(queue, static_cast<const packet_t *>(in_packets), count, writer);
     }
+    else
+        writer(in_packets, count);
 }
 
 bool hsaInterceptor::shuttingdown()
@@ -424,7 +426,7 @@ void cache_watcher()
 void signal_runner()
 {
     hsaInterceptor *me = hsaInterceptor::getInstance();
-    uint64_t count = 0;
+    //uint64_t count = 0;
     while (!me->shuttingdown())
     {
         std::vector<hsa_signal_t> curr_sigs;
@@ -438,7 +440,7 @@ void signal_runner()
                     if (!me->signalWait(curr_sigs[i], 1))
                     {
                         me->signalCompleted(curr_sigs[i]);
-                        count++;
+      //                  count++;
                     }
 
                 }

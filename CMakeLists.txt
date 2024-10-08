@@ -50,7 +50,8 @@ set(clang "${ROCM_PATH}/llvm/bin/clang")
 
 find_program(
     HIPCC_EXECUTABLE
-    NAMES g++
+    #NAMES g++
+    NAMES hipcc
     HINTS ${CMAKE_INSTALL_PREFIX}
     PATHS ${CMAKE_INSTALL_PREFIX}
     PATH_SUFFIXES bin)

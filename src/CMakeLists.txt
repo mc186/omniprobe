@@ -27,7 +27,44 @@ set ( LIB_SRC
   ${LIB_DIR}/utils.cc
 )
 
+function(find_file_directory FILENAME DIRS OUTPUT_VAR)
+    # Search for the file in the provided directories
+    find_file(FILE_FOUND ${FILENAME} PATHS ${DIRS})
 
+    # Check if the file was found
+    if(FILE_FOUND)
+        # Extract the directory from the found file path
+        get_filename_component(DIR_FOUND ${FILE_FOUND} DIRECTORY)
+        # Set the output variable to the found directory
+        set(${OUTPUT_VAR} ${DIR_FOUND} PARENT_SCOPE)
+    else()
+        # If the file is not found, set the output variable to an empty value
+        set(${OUTPUT_VAR} "" PARENT_SCOPE)
+        message(WARNING "File ${FILENAME} not found in directories: ${DIRS}")
+    endif()
+endfunction()
+
+set(DH_COMMS_SEARCH_DIRS
+    ${CMAKE_INCLUDE_PATH}
+    )
+
+find_file_directory("dh_comms.h" "${DH_COMMS_SEARCH_DIRS}"  DH_COMMS_INCLUDE)
+
+if(DH_COMMS_INCLUDE)
+    message(STATUS "Found dh_comms include directory: ${DH_COMMS_INCLUDE}")
+else()
+    message(WARNING "Could not find dh_comms include directory")
+    message(WARNING "This project has a dependency on the dh_comms library which can be found here: https://github.com/AARInternal/dh_comms.git")
+endif()
+
+find_library(DH_COMMS_LIB NAMES dh_ omms libdh_comms.so)
+
+if(DH_COMMS_LIB)
+    message(STATUS "Found dh_comms library: ${DH_COMMS_LIB}")
+else()
+    message(WARNING "Could not find dh_comms library")
+    message(WARNING "This project has a dependency on the dh_comms library which can be found here: https://github.com/AARInternal/dh_comms.git")
+endif()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -86,6 +123,7 @@ target_include_directories (
     ${ROOT_DIR}
     ${HSA_RUNTIME_INC_PATH}
     ${HSA_KMT_LIB_PATH}/..
+    ${DH_COMMS_INCLUDE}
 )
 
 target_link_libraries(
@@ -95,6 +133,7 @@ target_link_libraries(
     c
     stdc++
     stdc++fs
+    ${DH_COMMS_LIB}
 )
 
 
