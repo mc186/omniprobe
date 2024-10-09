@@ -25,6 +25,7 @@ set ( TARGET_LIB "${TARGET_NAME}" )
 set ( LIB_SRC
   ${LIB_DIR}/interceptor.cc
   ${LIB_DIR}/utils.cc
+  ${LIB_DIR}/hsa_mem_mgr.cc
 )
 
 function(find_file_directory FILENAME DIRS OUTPUT_VAR)
