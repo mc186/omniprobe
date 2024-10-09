@@ -18,6 +18,7 @@
 #include "timehelper.h"
 #include "utils.h"
 #include "dh_comms.h"
+#include "hsa_mem_mgr.h"
 
 class hsaInterceptor;
 void signal_runner();
@@ -135,6 +136,7 @@ private:
     coCache kernel_cache_;
     bool run_instrumented_;
     KernArgAllocator allocator_;
+    hsa_mem_mgr mem_mgr_;
     std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> pending_kernargs_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;

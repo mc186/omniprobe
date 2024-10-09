@@ -143,7 +143,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr) 
+    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), mem_mgr_(allocator_) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -678,7 +678,6 @@ hsa_status_t hsaInterceptor::hsa_queue_create(hsa_agent_t agent, uint32_t size, 
 
 hsa_status_t hsaInterceptor::hsa_queue_destroy(hsa_queue_t *queue)
 {
-    cerr << "DESTROY QUEUE\n";
     hsa_status_t result = HSA_STATUS_SUCCESS;
     try
     {
@@ -789,11 +788,11 @@ extern "C" {
         cerr << "hsaInterceptor: Application elapsed usecs: " << globalTime.getElapsedNanos() / 1000 << "us\n";
     }
 
-    static void unload_me() __attribute__((destructor));
+   /* static void unload_me() __attribute__((destructor));
     void unload_me()
     {
         // cout << "ROCMHOOK: Unloading" << endl;
         hsaInterceptor::cleanup();
         cerr << "hsaInterceptor: Application elapsed usecs: " << globalTime.getElapsedNanos() / 1000 << "us\n";
-    }
+    }*/
 }
