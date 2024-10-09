@@ -44,4 +44,6 @@ This project now depends on the dh_comms library which can be found here: https:
 The cmake file(s) will search for this library. If it can't find them it will issue warnings but will not fail.
 If dh_comms is not installed in the normal locations (e.g. /usr/local/ or $HOME/.local) this you can get logduration to build
 by running cmake like this:
-cmake -DCMAKE_LIBRARY_PATH=<path to dh_comm library> -DCMAKE_INCLUDE_PATH=<path to dh_comms include files> ..
+```
+cmake -DCMAKE_LIBRARY_PATH=<path to dh_comm library> -DCMAKE_INCLUDE_PATH=<path to dh_comms include files>
+```
