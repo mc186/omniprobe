@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "dh_comms.h"
 #include "hsa_mem_mgr.h"
+#include "comms_mgr.h"
 
 class hsaInterceptor;
 void signal_runner();
@@ -30,6 +31,7 @@ void cache_watcher();
 
 #define REPLAY_QUEUE_SIZE 512
 #define SIGPOOL_INCREMENT 8
+#define BUFFERPOOL_INCREMENT 8
 
 #ifndef NDEBUG
 	template<typename ...Args>
@@ -46,8 +48,6 @@ void cache_watcher();
 typedef uint32_t packet_word_t;
 typedef hsa_kernel_dispatch_packet_t dispatch_packet_t;
 typedef hsa_ext_amd_aql_pm4_packet_t packet_t;
-
-
 
 
 static const int CHECKSUM_PAGE_SIZE = 1 << 20;
@@ -86,7 +86,9 @@ private:
     static hsa_status_t hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute, void *data);
     hsa_kernel_dispatch_packet_t *fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue);
     virtual void doPackets(hsa_queue_t *queue, const packet_t *packet, uint64_t count, hsa_amd_queue_intercept_packet_writer writer);
-
+    bool growBufferPool(hsa_agent_t agent, size_t count);
+    hsa_mem_mgr *checkoutBuffer(hsa_agent_t agent);
+    bool checkinBuffer(hsa_agent_t agent);
 public:
     void addAgent(hsa_agent_t agent, unsigned int dev_index);
     std::string packetToText(const packet_t *packet);
@@ -138,6 +140,10 @@ private:
     KernArgAllocator allocator_;
     hsa_mem_mgr mem_mgr_;
     std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> pending_kernargs_;
+    std::map<hsa_agent_t, hsa_mem_mgr *, hsa_cmp<hsa_agent_t>> mem_mgrs_;
+    std::map<hsa_agent_t, std::vector<void *>, hsa_cmp<hsa_agent_t>> device_buffer_pool_;
+    std::map<hsa_agent_t, std::vector<dh_comms::dh_comms_descriptor>, hsa_cmp<hsa_agent_t>> descriptor_pool_;
+    comms_mgr comms_mgr_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;

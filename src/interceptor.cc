@@ -143,7 +143,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), mem_mgr_(allocator_) 
+    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), mem_mgr_(allocator_), comms_mgr_(table) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -171,12 +171,11 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                 }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
             {
                 std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
-                if (cacheLocation.length())
+                for (auto agent : gpus)
                 {
-                    for (auto agent : gpus)
-                    {
+                    if (cacheLocation.length())
                         kernel_cache_.setLocation(agent, cacheLocation);
-                    }
+                    comms_mgr_.addAgent(agent);
                 }
             }
 }
@@ -190,6 +189,21 @@ hsaInterceptor::~hsaInterceptor() {
     for (auto sig : sig_pool_)
         CHECK_STATUS("Signal cleanup error at shutdown", apiTable_->core_->hsa_signal_destroy_fn(sig));
     restoreHsaApi();
+}
+
+bool hsaInterceptor::growBufferPool(hsa_agent_t agent, size_t count)
+{
+    return false;
+}
+
+hsa_mem_mgr * hsaInterceptor::checkoutBuffer(hsa_agent_t agent)
+{
+    return NULL;
+}
+
+bool hsaInterceptor::checkinBuffer(hsa_agent_t agent)
+{
+    return false;
 }
 
 bool hsaInterceptor::addCodeObject(const std::string& name)
