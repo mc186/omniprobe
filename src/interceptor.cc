@@ -143,7 +143,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), mem_mgr_(allocator_), comms_mgr_(table) 
+    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), comms_mgr_(table) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);

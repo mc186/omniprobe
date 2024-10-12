@@ -523,7 +523,7 @@ KernArgAllocator::KernArgAllocator(HsaApiTable *apiTable, ostream& out) : out_(o
     }, this);
 }
 
-void * KernArgAllocator::allocate(size_t size, hsa_agent_t allowed)
+void * KernArgAllocator::allocate(size_t size, hsa_agent_t allowed) const
 {
   uint8_t* buffer = NULL;
   size = (size + RH_PAGE_MASK) & ~RH_PAGE_MASK;
@@ -536,7 +536,7 @@ void * KernArgAllocator::allocate(size_t size, hsa_agent_t allowed)
   return ptr;
 }
 
-void KernArgAllocator::free(void *ptr)
+void KernArgAllocator::free(void *ptr) const
 {
     hsa_amd_memory_pool_free(ptr);
 }

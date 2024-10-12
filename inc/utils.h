@@ -95,9 +95,9 @@ class KernArgAllocator
 public:
     KernArgAllocator(HsaApiTable *pTable, std::ostream& out);
     ~KernArgAllocator();
-    void *allocate(size_t size, hsa_agent_t allowed);
-    void *allocate(size_t size);
-    void free(void *ptr);
+    void *allocate(size_t size, hsa_agent_t allowed)const;
+    void *allocate(size_t size)const;
+    void free(void *ptr) const;
     void setPool(hsa_amd_memory_pool_t pool) {pool_ = pool;}
     std::ostream& out_;
 private:

@@ -19,23 +19,31 @@
 #include "timehelper.h"
 #include "utils.h"
 #include "dh_comms.h"
-#include "hsa_mem_mgr.h"
+
+
+typedef struct pool_specs
+{
+    hsa_agent_t agent_;
+    hsa_amd_memory_pool_t pool_;
+    size_t min_alloc_size_;
+}pool_specs_t;
+
 class comms_mgr 
 {
 public: 
     comms_mgr(HsaApiTable *pTable);
     ~comms_mgr();
-    void * checkoutCommsDescriptor(hsa_agent_t agent);
-    bool checkinCommsDescriptor(hsa_agent_t agent, void *device_buffer);
+    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent);
+    bool checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object);
     bool addAgent(hsa_agent_t agent);
 private:
+    KernArgAllocator kern_arg_allocator_;
     std::mutex mutex_;
     bool growBufferPool(hsa_agent_t agent, size_t count);
-    std::map<void *, dh_comms::dh_comms_descriptor> pending_buffers_;
-    std::map<hsa_agent_t, hsa_amd_memory_pool_t, hsa_cmp<hsa_agent_t>> mem_pools_;
-    std::map<hsa_agent_t, hsa_mem_mgr *, hsa_cmp<hsa_agent_t>> mem_mgrs_;
-    std::map<hsa_agent_t, std::vector<void *>, hsa_cmp<hsa_agent_t>> device_buffer_pool_;
-    std::map<hsa_agent_t, std::vector<dh_comms::dh_comms_descriptor>, hsa_cmp<hsa_agent_t>> descriptor_pool_;
+    std::map<hsa_agent_t, pool_specs_t, hsa_cmp<hsa_agent_t>> mem_pools_;
+    std::map<hsa_agent_t, dh_comms::dh_comms_mem_mgr *, hsa_cmp<hsa_agent_t>> mem_mgrs_;
+    std::map<hsa_agent_t, std::vector<dh_comms::dh_comms *>, hsa_cmp<hsa_agent_t>> comms_pool_;
+    std::map<hsa_agent_t, std::vector<dh_comms::dh_comms *>, hsa_cmp<hsa_agent_t>> pending_comms_;
     HsaApiTable *pTable_;
 };
 

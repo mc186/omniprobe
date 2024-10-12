@@ -138,7 +138,6 @@ private:
     coCache kernel_cache_;
     bool run_instrumented_;
     KernArgAllocator allocator_;
-    hsa_mem_mgr mem_mgr_;
     std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> pending_kernargs_;
     std::map<hsa_agent_t, hsa_mem_mgr *, hsa_cmp<hsa_agent_t>> mem_mgrs_;
     std::map<hsa_agent_t, std::vector<void *>, hsa_cmp<hsa_agent_t>> device_buffer_pool_;
