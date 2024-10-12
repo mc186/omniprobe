@@ -24,6 +24,7 @@
 class hsaInterceptor;
 void signal_runner();
 void cache_watcher();
+void comms_runner(comms_mgr& mgr);
 
 #define PUBLIC_API __attribute__((visibility("default")))
 #define CONSTRUCTOR_API __attribute__((constructor))
@@ -111,6 +112,7 @@ public:
     }
     friend void signal_runner();
     friend void cache_watcher();
+    friend void comms_runner(comms_mgr& mgr);
 protected:
     bool shuttingdown();
     void shutdown();
@@ -143,6 +145,7 @@ private:
     std::map<hsa_agent_t, std::vector<void *>, hsa_cmp<hsa_agent_t>> device_buffer_pool_;
     std::map<hsa_agent_t, std::vector<dh_comms::dh_comms_descriptor>, hsa_cmp<hsa_agent_t>> descriptor_pool_;
     comms_mgr comms_mgr_;
+    std::thread comms_runner_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;

@@ -143,7 +143,8 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), comms_mgr_(table) 
+    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), 
+        comms_mgr_(table), comms_runner_(comms_runner, std::ref(comms_mgr_)) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -184,6 +185,7 @@ hsaInterceptor::~hsaInterceptor() {
     cerr << "Joining the signal runner\n";
     signal_runner_.join();
     cache_watcher_.join();
+    comms_runner_.join();
     // Join signal processing thread here
     lock_guard<std::mutex> lock(mutex_);
     for (auto sig : sig_pool_)
@@ -296,6 +298,17 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
     {
         cerr << "Some big problem occurred, a pending signal is missing\n";
     }
+}
+
+void comms_runner(comms_mgr& mgr)
+{
+    cerr << "Comms Runner\n";
+    hsaInterceptor *me = hsaInterceptor::getInstance();
+    while (!me->shuttingdown())
+    {
+        usleep(500);
+    }
+    cerr << "Comms Runner shutting down\n";
 }
 
 void cache_watcher()
