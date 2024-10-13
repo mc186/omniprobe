@@ -57,7 +57,8 @@ typedef struct kernel_info{
     hsa_signal_t signal_;
     std::string name_;
     hsa_agent_t agent_;
-    dh_comms::dh_comms *comms_obj;
+    dh_comms::dh_comms *comms_obj_;
+    dh_comms::message_processor_base *mp;
     timeHelper th_;
 }kernel_info_t;
 
@@ -147,6 +148,7 @@ private:
     std::map<hsa_agent_t, std::vector<dh_comms::dh_comms_descriptor>, hsa_cmp<hsa_agent_t>> descriptor_pool_;
     comms_mgr comms_mgr_;
     std::thread comms_runner_;
+    std::vector<dh_comms::message_processor_base *> mp_pool_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;

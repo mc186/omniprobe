@@ -34,7 +34,7 @@ class comms_mgr
 public: 
     comms_mgr(HsaApiTable *pTable);
     ~comms_mgr();
-    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent);
+    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, dh_comms::message_processor_base& mp);
     bool checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object);
     bool addAgent(hsa_agent_t agent);
 private:
@@ -54,11 +54,14 @@ private:
 #define DH_SUB_BUFFER_CAPACITY (64 * 1024) 
 
 
-class default_message_processor : dh_comms::message_processor_base
+class default_message_processor : public dh_comms::message_processor_base
 {
 public:
-    default_message_processor(comms_mgr *mgr);
+    default_message_processor(std::string& strName, uint32_t dispatch_id);
     ~default_message_processor();
     virtual size_t operator()(char *&message_p, size_t size, size_t sub_buf_no);
     virtual bool is_thread_safe() const;
+private:
+    std::string strKernelName_;
+    uint32_t dispatch_id_;
 };

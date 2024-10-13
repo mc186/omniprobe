@@ -293,6 +293,10 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         }
         //Put this completion signal back in the pool for subsequent dispatches
         sig_pool_.push_back(sig);
+        if (ki.mp)
+            delete ki.mp;
+        if (ki.comms_obj_)
+            comms_mgr_.checkinCommsObject(ki.agent_, ki.comms_obj_);
     }
     else
     {
@@ -570,6 +574,9 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         }
         sig = sig_pool_.back();
         sig_pool_.pop_back();
+        dh_comms::message_processor_base *mp = NULL;
+        dh_comms::dh_comms_mem_mgr *mem_mgr = NULL;
+        dh_comms::dh_comms *comms = NULL;
         uint64_t alt_kernel_object;
         // Are there any kernels in the cache?
         if (kernel_cache_.hasKernels(queues_[queue]))
@@ -600,7 +607,15 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         memset(new_kernargs, 0, size);
                         memcpy(new_kernargs, dispatch->kernarg_address, it->second.kernarg_size_);
                         dispatch->kernarg_address = new_kernargs;
-                        dh_comms::dh_comms *comms = comms_mgr_.checkoutCommsObject(queues_[queue]);
+                        if (mp_pool_.empty())
+                            mp = new default_message_processor(kernel_objects_[dispatch->kernel_object].name_,0);
+                        else
+                        {
+                            mp = mp_pool_.back();
+                            mp_pool_.pop_back();
+                        }
+                            
+                        comms = comms_mgr_.checkoutCommsObject(queues_[queue],*mp);
                         void **comms_loc = (void **)(((char *)new_kernargs) + (size - sizeof(void *)));
                         *comms_loc = comms;
                         // Store the kernarg address so we can free it up at kernel completion
@@ -612,7 +627,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             }
         }
         // Store the signal for processing at kernel completion
-        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue], NULL};
+        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue], comms, mp};
         //replace any pre-existing completion_signal in the dispatch. FWIW, normal HIP/ROCm codes don't use dispatch packet
         //completion signals. The typically enqueue a barrier packet immediately following a kernel dispatch packet.
         dispatch->completion_signal = sig;

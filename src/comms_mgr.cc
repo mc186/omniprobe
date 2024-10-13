@@ -14,16 +14,24 @@ comms_mgr::~comms_mgr()
     mem_mgrs_.clear();
 }
 
-dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent)
+dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, dh_comms::message_processor_base& mp)
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    dh_comms::dh_comms_mem_mgr *mem_mgr = NULL;
+    auto it = mem_mgrs_.find(agent);
+    if (it != mem_mgrs_.end())
+    {
+        mem_mgr = it->second;
+        dh_comms::dh_comms *obj = new dh_comms::dh_comms(DH_SUB_BUFFER_COUNT, DH_SUB_BUFFER_CAPACITY, mp, DH_THREAD_COUNT, mem_mgr);
+    }
     return NULL;
 }
 
 bool comms_mgr::checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    return false;
+    delete object;
+    return true;
 }
 
     
@@ -84,8 +92,10 @@ bool comms_mgr::growBufferPool(hsa_agent_t agent, size_t count)
 }
 
 
-default_message_processor::default_message_processor(comms_mgr *mgr)
+default_message_processor::default_message_processor(std::string& strName, uint32_t dispatch_id)
 {
+    strKernelName_ = strName;
+    dispatch_id_ = dispatch_id;
 }
 
 default_message_processor::~default_message_processor()
