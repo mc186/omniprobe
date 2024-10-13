@@ -57,6 +57,7 @@ typedef struct kernel_info{
     hsa_signal_t signal_;
     std::string name_;
     hsa_agent_t agent_;
+    dh_comms::dh_comms *comms_obj;
     timeHelper th_;
 }kernel_info_t;
 
