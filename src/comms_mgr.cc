@@ -82,3 +82,24 @@ bool comms_mgr::growBufferPool(hsa_agent_t agent, size_t count)
 {
     return false;
 }
+
+
+default_message_processor::default_message_processor(comms_mgr *mgr)
+{
+}
+
+default_message_processor::~default_message_processor()
+{
+}
+
+size_t default_message_processor::operator()(char *&message_p, size_t size, size_t sub_buf_no)
+{
+    cerr << "default_message_processor:\n\tMessage of size " << std::dec << size << " with " << sub_buf_no << " sub buffers\n";
+    return size;
+}
+
+
+bool default_message_processor::is_thread_safe() const
+{
+    return false;
+}
