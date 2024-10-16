@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+
+import argparse
+import os
+import sys
+import shutil
+import glob
+
+
+def add_general_group(parser):
+    general_group = parser.add_argument_group("General omniprobe arguments")
+
+    general_group.add_argument (
+        "-v",
+        "--verbose",
+        type=bool,
+        metavar="",
+        dest="verbose",
+        required=False,
+        default=False,
+        help="\tVerbose output"
+    )
+    general_group.add_argument (
+        "-t",
+        "--type",
+        type=str,
+        metavar="",
+        dest="type",
+        required=False,
+        default="memorytrace",
+        help="\tSpecify the type of instrumentation to run"
+    )
+    
+    general_group.add_argument (
+        "-k",
+        "--kernels",
+        type=str,
+        metavar="",
+        dest="kernels",
+        required=False,
+        default="",
+        help="\tKernel filters to define which kernels are instrumented"
+    )
+    
+    general_group.add_argument (
+        "-d",
+        "--dispatches",
+        type=str,
+        metavar="",
+        dest="dispatches",
+        required=False,
+        default="all",
+        help="\tThe dispatches for which to capture output.  Valid options [all, random, 1]"
+    )
+    
+    general_group.add_argument (
+        "-a",
+        "--analyzer",
+        type=str,
+        metavar="",
+        dest="handler",
+        required=False,
+        default="",
+        help="\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module"
+    )
+    
+    general_group.add_argument(
+        "remaining",
+        metavar="-- [ ...]",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="\tProvide command for instrumenting after a double dash.",
+    )
+    return
+
+def parse_args():
+    parser = argparse.ArgumentParser(description = "Command-line interface for running intra-kernel analytics on AMD Instinct GPUs",
+        prog="sentinel",
+        formatter_class = lambda prog: argparse.RawTextHelpFormatter(
+                prog, max_help_position=30
+            ),
+            usage="omniprobe [options] -- application"
+           )
+    parser._optionals.title = "Help"
+    
+    prog="omniprobe",
+    allow_abbrev=False,
+    formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog, max_help_position=40)
+
+    add_general_group(parser)
+    parms = parser.parse_args()
+    print(parms)
+
+    
+def main():
+    print("omniprobe is a work of AMD Research and Advanced Development")
+    print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.")
+    parms  = parse_args()
+
+if __name__ == "__main__":
+    main()

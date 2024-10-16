@@ -633,7 +633,7 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
         if (kind == AMD_COMGR_METADATA_KIND_MAP)
         {
             amd_comgr_metadata_node_t field;
-            CHECK_COMGR(amd_comgr_metadata_lookup(value,".name", &field));
+            CHECK_COMGR(amd_comgr_metadata_lookup(value,".symbol", &field));
             std::string strName = get_metadata_string(field);
             arg_descriptor_t desc = {0,0,0};
             amd_comgr_metadata_node_t args;
