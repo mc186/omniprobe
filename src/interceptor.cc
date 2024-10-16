@@ -577,6 +577,33 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         dh_comms::message_processor_base *mp = NULL;
         dh_comms::dh_comms_mem_mgr *mem_mgr = NULL;
         dh_comms::dh_comms *comms = NULL;
+        {
+            /*if (mp_pool_.empty())
+                mp = new default_message_processor(kernel_objects_[dispatch->kernel_object].name_,0);
+            else
+            {
+                mp = mp_pool_.back();
+                mp_pool_.pop_back();
+            }
+                
+            comms = comms_mgr_.checkoutCommsObject(queues_[queue],*mp);*/
+            size_t size = 0;
+            auto it = kernel_objects_.find(packet->kernel_object);
+            if (it != kernel_objects_.end())
+                size = it->second.kernarg_size_;
+            void ** test = (void **)packet->kernarg_address;
+            cerr << "KernArg Addr: " << std::hex << packet->kernarg_address << std::endl;
+            for (uint32_t i = 0; i < size / sizeof(void *); i++)
+            {
+                /*if (i > 4)
+                    test[i] = NULL;*/
+                cerr << std::hex << test[i] << std::endl;
+            }
+            void **comms_loc = (void **)(((char *)packet->kernarg_address) + (size - sizeof(void *)));
+            cerr << "Kernarg size: " << size << std::endl;
+            cerr << std::hex << packet->kernarg_address << " " << comms_loc << std::dec << std::endl;
+            //*comms_loc = comms;
+        }
         uint64_t alt_kernel_object;
         // Are there any kernels in the cache?
         if (kernel_cache_.hasKernels(queues_[queue]))

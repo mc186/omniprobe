@@ -59,6 +59,7 @@ THE SOFTWARE.
 #include <hsa.h>
 #include <hsa_ven_amd_aqlprofile.h>
 #include <hsa_ven_amd_loader.h>
+#include <amd_comgr/amd_comgr.h>
 #include "rocprofiler/rocprofiler.h"
 #define AMD_INTERNAL_BUILD
 #include <hsa_api_trace.h>
@@ -144,6 +145,25 @@ private:
     std::string location_;
     std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
     std::map<uint64_t, uint32_t> kernarg_sizes_;
+};
+
+typedef struct arg_descriptor {
+    size_t explicit_args_length;
+    size_t hidden_args_length;
+    size_t kernarg_length;
+}arg_descriptor_t;
+
+class KernelArgHelper {
+public:
+    KernelArgHelper(const std::string file_name);
+    KernelArgHelper(const unsigned char *bits, size_t length);
+    ~KernelArgHelper();
+    bool getArgDescriptor(const std::string& strName, arg_descriptor_t& desc);
+private:
+    std::string get_metadata_string(amd_comgr_metadata_node_t node);
+    void computeKernargData(amd_comgr_metadata_node_t exec_map);
+    std::map<std::string, arg_descriptor_t> kernels_;
+
 };
 
 class logDuration{

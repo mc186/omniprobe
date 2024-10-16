@@ -545,4 +545,162 @@ KernArgAllocator::~KernArgAllocator()
 {
 }
     
+#define CHECK_COMGR(call)                                                                          \
+  if (amd_comgr_status_s status = call) {                                                          \
+    const char* reason = "";                                                                       \
+    amd_comgr_status_string(status, &reason);                                                      \
+    std::cerr << __LINE__ << " code: " << status << std::endl;                                     \
+    std::cerr << __LINE__ << " failed: " << reason << std::endl;                                   \
+    exit(1);                                                                                       \
+  }
+
+KernelArgHelper::KernelArgHelper(const std::string file_name)
+{
+    amd_comgr_data_t executable;
+    std::vector<char> buff;
+    std::ifstream file(file_name, std::ios::binary | std::ios::ate);
+
+    if (!file.is_open()) {
+        std::cerr << "Failed to open the file: " << file_name << std::endl;
+    }
+
+    std::streamsize fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // Resize the buffer to fit the file content
+    buff.resize(fileSize);
+
+    // Read the file content into the buffer
+    if (!file.read(buff.data(), fileSize)) {
+        std::cerr << "Failed to read the file content" << std::endl;
+    }
+    file.close();
+    CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &executable));
+    CHECK_COMGR(amd_comgr_set_data(executable, buff.size(), buff.data()));
+    
+    amd_comgr_metadata_node_t metadata;
+    CHECK_COMGR(amd_comgr_get_data_metadata(executable, &metadata));
+
+    amd_comgr_metadata_kind_t md_kind;
+    CHECK_COMGR(amd_comgr_get_metadata_kind(metadata, &md_kind));
+
+    if (md_kind == AMD_COMGR_METADATA_KIND_MAP)
+    {
+        std::string strIndent("");
+        std::map<std::string, arg_descriptor_t> parms; 
+        computeKernargData(metadata);
+    }
+}
+
+KernelArgHelper::~KernelArgHelper()
+{
+}
+
+KernelArgHelper::KernelArgHelper(const unsigned char *bits, size_t length)
+{
+}
+
+std::string KernelArgHelper::get_metadata_string(amd_comgr_metadata_node_t node)
+{
+    std::string strValue;
+    amd_comgr_metadata_kind_t kind;
+    CHECK_COMGR(amd_comgr_get_metadata_kind(node, &kind));
+    if (kind == AMD_COMGR_METADATA_KIND_STRING)
+    {
+        size_t size;
+        CHECK_COMGR(amd_comgr_get_metadata_string(node, &size, NULL));
+        strValue.resize(size);
+        CHECK_COMGR(amd_comgr_get_metadata_string(node, &size, &strValue[0]));
+    }
+    return strValue;
+}
+
+void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
+{
+    amd_comgr_metadata_node_t kernels;
+    amd_comgr_metadata_node_t args;
+    amd_comgr_metadata_node_t kernarg_length;
+    CHECK_COMGR(amd_comgr_metadata_lookup(exec_map, "amdhsa.kernels", &kernels));
+    size_t size;
+    CHECK_COMGR(amd_comgr_get_metadata_list_size(kernels, &size));
+    for (size_t i = 0; i < size; i++)
+    {
+        amd_comgr_metadata_node_t value;
+        amd_comgr_metadata_kind_t kind;
+        CHECK_COMGR(amd_comgr_index_list_metadata(kernels, i, &value));
+        CHECK_COMGR(amd_comgr_get_metadata_kind(value, &kind));
+
+        if (kind == AMD_COMGR_METADATA_KIND_MAP)
+        {
+            amd_comgr_metadata_node_t field;
+            CHECK_COMGR(amd_comgr_metadata_lookup(value,".name", &field));
+            std::string strName = get_metadata_string(field);
+            arg_descriptor_t desc = {0,0,0};
+            amd_comgr_metadata_node_t args;
+            CHECK_COMGR(amd_comgr_metadata_lookup(value, ".args", &args));
+            CHECK_COMGR(amd_comgr_get_metadata_kind(args, &kind));
+            amd_comgr_metadata_node_t kernarg_length;
+            CHECK_COMGR(amd_comgr_metadata_lookup(value, ".kernarg_segment_size", &kernarg_length));
+            desc.kernarg_length = std::stoul(get_metadata_string(kernarg_length));
+            if (kind == AMD_COMGR_METADATA_KIND_LIST)
+            {
+                size_t arg_count;
+                CHECK_COMGR(amd_comgr_get_metadata_list_size(args, &arg_count));
+                std::cerr << "Kernel has a list of size " << arg_count << std::endl;
+                for (size_t j = 0; j < arg_count; j++)
+                {
+                    amd_comgr_metadata_node_t parm_map;
+                    amd_comgr_metadata_kind_t parm_kind;
+                    CHECK_COMGR(amd_comgr_index_list_metadata(args, j, &parm_map));
+                    CHECK_COMGR(amd_comgr_get_metadata_kind(parm_map,&parm_kind));
+                    if (parm_kind == AMD_COMGR_METADATA_KIND_MAP)
+                    {
+                        /*
+                         * List Index 3 is a MAP
+                                Key:.offset
+                                Value:24
+                                Key:.size
+                                Value:4
+                                Key:.value_kind
+                                Value:by_value
+                            List Index 4 is a MAP
+                                Key:.offset
+                                Value:32
+                                Key:.size
+                                Value:8
+                                Key:.value_kind
+                                Value:hidden_global_offset_x
+
+                         */
+                        amd_comgr_metadata_node_t parm_size, parm_type;
+                        CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".size", &parm_size));
+                        CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".value_kind", &parm_type));
+                        size_t arg_size = std::stoul(get_metadata_string(parm_size));
+                        std::string parm_name = get_metadata_string(parm_type);
+                        std::cerr << "parm_name = " << parm_name << std::endl;
+                        if (parm_name.rfind("hidden_",0) == 0)
+                            desc.hidden_args_length += arg_size;
+                        else
+                            desc.explicit_args_length += arg_size;
+                    }
+                }
+            }
+            kernels_[strName] = desc;
+        }
+    }
+}
+
+bool KernelArgHelper::getArgDescriptor(const std::string& strName, arg_descriptor_t& desc)
+{
+    bool bSuccess = false;
+    auto it = kernels_.find(strName);
+    if (it != kernels_.end())
+    {
+        bSuccess = true;
+        desc = it->second;
+    }
+    return bSuccess;
+}
+
+
 

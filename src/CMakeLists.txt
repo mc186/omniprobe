@@ -136,6 +136,7 @@ target_link_libraries(
     stdc++
     stdc++fs
     ${DH_COMMS_LIB}
+    amd_comgr
 )
 
 
