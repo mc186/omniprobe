@@ -6,6 +6,18 @@ import sys
 import shutil
 import glob
 
+#LOGDUR_INSTRUMENTED
+#LOGDUR_KERNEL_CACHE
+#HSA_TOOLS_LIB
+#TRITON_LOGGER_LEVEL=3
+#TRITON_HIP_LLD_PATH=${ROCM_HOME}/llvm/bin/ld.lld
+#TRITON_ALWAYS_COMPILE=1
+#TRITON_DISABLE_LINE_INFO=0
+#AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE=[some .bc file used by llvm plugin]
+#LLVM_PASS_PLUGIN=[location of plugin.so]
+
+op_run_env = {"LOGDUR_INSTRUMENTED": "true"} 
+
 
 def add_general_group(parser):
     general_group = parser.add_argument_group("General omniprobe arguments")
