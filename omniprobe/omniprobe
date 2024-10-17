@@ -3,8 +3,12 @@
 import argparse
 import os
 import sys
+import io
+import selectors
 import shutil
 import glob
+import subprocess
+import logging
 
 #LOGDUR_INSTRUMENTED
 #LOGDUR_KERNEL_CACHE
@@ -18,6 +22,81 @@ import glob
 
 op_run_env = {"LOGDUR_INSTRUMENTED": "true"} 
 
+def console_log(*argv, indent_level=0):
+    indent = ""
+    if indent_level >= 1:
+        indent = " " * 3 * indent_level + "|-> "  # spaces per indent level
+
+    if len(argv) > 1:
+        logging.info(indent + f"[{argv[0]}] {argv[1]}")
+        logging.info(indent + f"[{argv[0]}] {argv[1]}")
+    else:
+        logging.info(indent + f"{argv[0]}")
+
+
+def console_debug(*argv):
+    if len(argv) > 1:
+        logging.debug(f"[{argv[0]}] {argv[1]}")
+    else:
+        logging.debug(f"{argv[0]}")
+
+
+def console_warning(*argv):
+    if len(argv) > 1:
+        for msg in argv:
+            logging.info(f"[{msg}]")
+        logging.warning(f"[{argv[0]}] {argv[1]}")
+    else:
+        logging.warning(f"{argv[0]}")
+
+
+def capture_subprocess_output(subprocess_args, new_env=None):
+    console_debug("subprocess", subprocess_args)
+    # Start subprocess
+    # bufsize = 1 means output is line buffered
+    # universal_newlines = True is required for line buffering
+    process = (
+        subprocess.Popen(
+            subprocess_args,
+            bufsize=1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+        )
+        if new_env == None
+        else subprocess.Popen(
+            subprocess_args,
+            bufsize=1,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            env=new_env,
+        )
+    )
+    print(process)
+    # Create callback function for process output
+    buf = io.StringIO()
+
+    def handle_output(stream, mask):
+        # Because the process' output is line buffered, there's only ever one
+        # line to read when this function is called
+        line = stream.readline()
+        buf.write(line)
+        console_warning(line.strip())
+
+    # Register callback for an "available for read" event from subprocess' stdout stream
+    selector = selectors.DefaultSelector()
+    selector.register(process.stdout, selectors.EVENT_READ, handle_output)
+
+    # Loop until subprocess is terminated
+    while process.poll() is None:
+        # Wait for events and handle them with their registered callbacks
+        events = selector.select()
+        for key, mask in events:
+            callback = key.data
+            callback(key.fileobj, mask)
+
+    # Get process return code
 
 def add_general_group(parser):
     general_group = parser.add_argument_group("General omniprobe arguments")
@@ -77,6 +156,17 @@ def add_general_group(parser):
     )
     
     general_group.add_argument (
+        "-l",
+        "--log-location",
+        type=str,
+        metavar="",
+        dest="log_location",
+        required=False,
+        default="console",
+        help="\tThe location where all of your data should be logged. By default it will be to the console."
+    )
+    
+    general_group.add_argument (
         "-a",
         "--analyzer",
         type=str,
@@ -112,13 +202,17 @@ def parse_args():
 
     add_general_group(parser)
     parms = parser.parse_args()
-    print(parms)
+    return parms
 
     
 def main():
     print("omniprobe is a work of AMD Research and Advanced Development")
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.")
     parms  = parse_args()
+    print(parms)
+    if len(parms.remaining) != 0:
+        print(f"Trying to run {parms.remaining[1:]}")
+        capture_subprocess_output(parms.remaining[1:])
 
 if __name__ == "__main__":
     main()
