@@ -54,6 +54,17 @@ def add_general_group(parser):
     )
     
     general_group.add_argument (
+        "-c",
+        "--cache-location",
+        type=str,
+        metavar="",
+        dest="cache_location",
+        required=False,
+        default="all",
+        help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
+    )
+    
+    general_group.add_argument (
         "-a",
         "--analyzer",
         type=str,
