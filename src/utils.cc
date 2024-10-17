@@ -116,6 +116,24 @@ bool coCache::hasKernels(hsa_agent_t agent)
     return lookup_map_.find(agent) != lookup_map_.end();
     
 }
+    
+bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc)
+{
+    bool bReturn = false;
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = arg_map_.find(agent);
+    if (it != arg_map_.end())
+    {
+        std::string instName = getInstrumentedName(name);
+        auto dit = it->second.find(getInstrumentedName(name));
+        if (dit != it->second.end())
+        {
+            desc = dit->second;
+            bReturn = true;
+        }
+    }
+    return bReturn;
+}
 
 bool coCache::addFile(const std::string& name, hsa_agent_t agent)
 {
@@ -170,6 +188,8 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
         return HSA_STATUS_SUCCESS;
     }, reinterpret_cast<void *>(&symbols));
 
+    KernelArgHelper kh(name);
+
     cerr << "coCache found " << symbols.size() << " symbols\n";
     for (auto sym : symbols)
     {
@@ -197,12 +217,24 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
             {
                 name[length] = '\0';
                 CHECK_STATUS("Can't retrieve name from valid symbol", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_NAME, name));
+                std::string mangledName(name);
+
                 string strName = demangleName(name);
-                cerr << "coCache: " << strName << std::endl;
+                arg_descriptor_t desc;
+                if (kh.getArgDescriptor(strName, desc))
+                {
+                   lock_guard<std::mutex> lock(mutex_);
+                   auto itMap = arg_map_.find(agent);
+                   if (itMap != arg_map_.end())
+                       itMap->second[name] = desc;
+                   else
+                        arg_map_[agent] = {{strName, desc}};
+                }
+                else
+                    std::cerr << "Unable to find arg descriptor for " << strName << std::endl;
                 free(reinterpret_cast<void *>(name));
                 {
                     lock_guard<std::mutex> lock(mutex_);
-                    cout << "Adding kernel " << strName << std::endl;
                     auto it = lookup_map_.find(agent);
                     if (it != lookup_map_.end())
                         it->second[strName] = sym;
@@ -609,7 +641,7 @@ std::string KernelArgHelper::get_metadata_string(amd_comgr_metadata_node_t node)
     {
         size_t size;
         CHECK_COMGR(amd_comgr_get_metadata_string(node, &size, NULL));
-        strValue.resize(size);
+        strValue.resize(size-1);
         CHECK_COMGR(amd_comgr_get_metadata_string(node, &size, &strValue[0]));
     }
     return strValue;
@@ -646,7 +678,6 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
             {
                 size_t arg_count;
                 CHECK_COMGR(amd_comgr_get_metadata_list_size(args, &arg_count));
-                std::cerr << "Kernel has a list of size " << arg_count << std::endl;
                 for (size_t j = 0; j < arg_count; j++)
                 {
                     amd_comgr_metadata_node_t parm_map;
@@ -655,29 +686,11 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                     CHECK_COMGR(amd_comgr_get_metadata_kind(parm_map,&parm_kind));
                     if (parm_kind == AMD_COMGR_METADATA_KIND_MAP)
                     {
-                        /*
-                         * List Index 3 is a MAP
-                                Key:.offset
-                                Value:24
-                                Key:.size
-                                Value:4
-                                Key:.value_kind
-                                Value:by_value
-                            List Index 4 is a MAP
-                                Key:.offset
-                                Value:32
-                                Key:.size
-                                Value:8
-                                Key:.value_kind
-                                Value:hidden_global_offset_x
-
-                         */
                         amd_comgr_metadata_node_t parm_size, parm_type;
                         CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".size", &parm_size));
                         CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".value_kind", &parm_type));
                         size_t arg_size = std::stoul(get_metadata_string(parm_size));
                         std::string parm_name = get_metadata_string(parm_type);
-                        std::cerr << "parm_name = " << parm_name << std::endl;
                         if (parm_name.rfind("hidden_",0) == 0)
                             desc.hidden_args_length += arg_size;
                         else

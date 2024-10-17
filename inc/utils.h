@@ -119,6 +119,12 @@ private:
     std::mutex mutex_;
 };
 
+typedef struct arg_descriptor {
+    size_t explicit_args_length;
+    size_t hidden_args_length;
+    size_t kernarg_length;
+}arg_descriptor_t;
+
 
 typedef struct cache_object{
     hsa_executable_t executable_;
@@ -136,22 +142,18 @@ public:
     bool hasKernels(hsa_agent_t agent);
     uint32_t getArgSize(uint64_t kernel_object);
     bool addFile(const std::string& name, hsa_agent_t agent);
+    bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc);
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;
     std::vector<std::string> filelist_;
     std::map<hsa_agent_t, std::map<std::string, hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> lookup_map_;
+    std::map<hsa_agent_t, std::map<std::string, arg_descriptor_t>, hsa_cmp<hsa_agent_t>> arg_map_;
     std::mutex mutex_;
     std::string location_;
     std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
     std::map<uint64_t, uint32_t> kernarg_sizes_;
 };
-
-typedef struct arg_descriptor {
-    size_t explicit_args_length;
-    size_t hidden_args_length;
-    size_t kernarg_length;
-}arg_descriptor_t;
 
 class KernelArgHelper {
 public:

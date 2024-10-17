@@ -585,10 +585,14 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             if (it != kernel_objects_.end())
             {
                 uint64_t alt_kernel_object = 0;
+                arg_descriptor_t args = {0,0,0};
                 // If we're running in instrumented mode, we're looking for a certain kernel naming convention along with
                 // an argument list expanded by a single void *
                 if (run_instrumented_)
+                {
                     alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_);
+                    kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args);
+                }
                 else
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
