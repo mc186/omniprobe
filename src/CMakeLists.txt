@@ -27,7 +27,10 @@ set ( LIB_SRC
   ${LIB_DIR}/utils.cc
   ${LIB_DIR}/hsa_mem_mgr.cc
   ${LIB_DIR}/comms_mgr.cc
+  ${LIB_DIR}/pyHandler.cc
 )
+
+find_package(Python COMPONENTS Development)
 
 function(find_file_directory FILENAME DIRS OUTPUT_VAR)
     # Search for the file in the provided directories
@@ -126,6 +129,7 @@ target_include_directories (
     ${HSA_RUNTIME_INC_PATH}
     ${HSA_KMT_LIB_PATH}/..
     ${DH_COMMS_INCLUDE}
+    ${Python_INCLUDE_DIRS}
 )
 
 target_link_libraries(
