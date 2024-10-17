@@ -546,6 +546,30 @@ string hsaInterceptor::packetToText(const packet_t *packet)
     }
     return buff.str();
 }
+
+
+void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descriptor_t desc)
+{
+    assert(dst);
+    assert(src);
+    memset(dst, 0, desc.kernarg_length);
+    /* The arg_descriptor is for the instrumented kernel, that means it includes compiler-added dh_comms_descriptor *
+     * as the last parameter. So when copying the original explicit kernel argments, the length is the explicit_argument_length
+     * minus the size of the dh_comms_descriptor *.
+    */
+    memcpy(dst, src, desc.explicit_args_length - sizeof(void *));
+    /* When copying implicit kernel arguments, the destination is immediately after the explicit arguments,
+     * The source location is immediately after the explicit arguments, but since the original kernel
+     * did not have the compiler-added dh_comms_descriptor *, the source location for implicit arguments 
+     * is calculated as being at src + explicit_args_length - size of dh_comms_descriptor pointer.
+     */
+    memcpy((void *)(reinterpret_cast<char *>(dst) + desc.explicit_args_length), 
+           (void *) (reinterpret_cast<char *>(src) + (desc.explicit_args_length - sizeof(void *))), 
+           desc.hidden_args_length);
+    void **comms_loc = (void **)(((char *)dst) + (desc.explicit_args_length  - sizeof(void *)));
+    *comms_loc = comms;
+}
+
 /*
     This function is the core of functionality for logDuration. It's where completion signals are set up for tracking so that
     at kernel completion we can extract start/stop times from the signal. It's also where "alternative" kernels - those found 
@@ -591,7 +615,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 if (run_instrumented_)
                 {
                     alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_);
-                    kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args);
                 }
                 else
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
@@ -606,24 +629,22 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                     if (run_instrumented_)
                     {
                         assert(size);
-                        void *new_kernargs = allocator_.allocate(size,queues_[queue]);
-                        assert(new_kernargs);
-                        memset(new_kernargs, 0, size);
-                        memcpy(new_kernargs, dispatch->kernarg_address, it->second.kernarg_size_);
-                        dispatch->kernarg_address = new_kernargs;
-                        if (mp_pool_.empty())
-                            mp = new default_message_processor(kernel_objects_[dispatch->kernel_object].name_,0);
-                        else
+                        if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args))
                         {
-                            mp = mp_pool_.back();
-                            mp_pool_.pop_back();
+                            void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
+                            if (mp_pool_.empty())
+                                mp = new default_message_processor(kernel_objects_[dispatch->kernel_object].name_,0);
+                            else
+                            {
+                                mp = mp_pool_.back();
+                                mp_pool_.pop_back();
+                            }
+                            comms = comms_mgr_.checkoutCommsObject(queues_[queue],*mp);
+                            fixupKernArgs(new_kernargs, dispatch->kernarg_address, comms, args);
+                            dispatch->kernarg_address = new_kernargs;
+                            // Store the kernarg address so we can free it up at kernel completion
+                            pending_kernargs_[sig] = new_kernargs;
                         }
-                            
-                        comms = comms_mgr_.checkoutCommsObject(queues_[queue],*mp);
-                        void **comms_loc = (void **)(((char *)new_kernargs) + (size - sizeof(void *)));
-                        *comms_loc = comms;
-                        // Store the kernarg address so we can free it up at kernel completion
-                        pending_kernargs_[sig] = new_kernargs;
                     }
                 }
                 else

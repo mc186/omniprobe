@@ -87,6 +87,7 @@ private:
     static hsa_status_t hsa_queue_create(hsa_agent_t agent, uint32_t size, hsa_queue_type32_t type, void(*callback)(hsa_status_t status, hsa_queue_t *source, void *data), void *data, uint32_t private_segment_size, uint32_t group_segment_size, hsa_queue_t **queue);
     static hsa_status_t hsa_queue_destroy(hsa_queue_t *queue);
     static hsa_status_t hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute, void *data);
+    void fixupKernArgs(void *dst, void *src, void *comms, arg_descriptor_t desc);
     hsa_kernel_dispatch_packet_t *fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue);
     virtual void doPackets(hsa_queue_t *queue, const packet_t *packet, uint64_t count, hsa_amd_queue_intercept_packet_writer writer);
     bool growBufferPool(hsa_agent_t agent, size_t count);
