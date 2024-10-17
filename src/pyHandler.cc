@@ -70,7 +70,10 @@ void pythonMessageHandler::addressMessage(void *address)
         std::cerr << "Function call to addressMessageHandler failed!" << std::endl;
     } else {
         std::cout << "Function call to addressMessageHandler succeeded!" << std::endl;
+        Py_DECREF(pValue);
     }
+    Py_DECREF(pArgs);
+    Py_DECREF(pDict);
     return;
 }
 
@@ -96,7 +99,10 @@ void pythonMessageHandler::timingMessage(uint64_t time)
         std::cerr << "Function call to timeMessageHandler failed!" << std::endl;
     } else {
         std::cout << "Function call to timeMessageHandler succeeded!" << std::endl;
+        Py_DECREF(pValue);
     }
+    Py_DECREF(pArgs);
+    Py_DECREF(pDict);
     return;
 }
 
