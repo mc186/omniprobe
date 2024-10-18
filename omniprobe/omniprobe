@@ -20,7 +20,25 @@ import logging
 #AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE=[some .bc file used by llvm plugin]
 #LLVM_PASS_PLUGIN=[location of plugin.so]
 
-op_run_env = {"LOGDUR_INSTRUMENTED": "true"} 
+op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": "./liblogduration64.so"} 
+
+
+def load_config_files():
+    global op_run_env
+    files = os.listdir("config")
+    for file in files:
+        f = open(f"config/{file}", "r")
+        txt = f.read()
+        p = eval(txt)
+        print(p)
+        if isinstance(p, dict):
+            keys = p.keys();
+            for key in keys:
+                if key in op_run_env:
+                    print(f"Duplicate configuration value for {key} in config/{file}")
+                else:
+                    op_run_env[key] = p[key]
+        print(op_run_env)
 
 def console_log(*argv, indent_level=0):
     indent = ""
@@ -208,6 +226,7 @@ def parse_args():
 def main():
     print("omniprobe is a work of AMD Research and Advanced Development")
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.")
+    load_config_files()
     parms  = parse_args()
     print(parms)
     if len(parms.remaining) != 0:
