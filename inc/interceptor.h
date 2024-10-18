@@ -58,7 +58,6 @@ typedef struct kernel_info{
     std::string name_;
     hsa_agent_t agent_;
     dh_comms::dh_comms *comms_obj_;
-    dh_comms::message_processor_base *mp;
     timeHelper th_;
 }kernel_info_t;
 
@@ -88,7 +87,7 @@ private:
     static hsa_status_t hsa_queue_destroy(hsa_queue_t *queue);
     static hsa_status_t hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute, void *data);
     void fixupKernArgs(void *dst, void *src, void *comms, arg_descriptor_t desc);
-    hsa_kernel_dispatch_packet_t *fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue);
+    hsa_kernel_dispatch_packet_t *fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue, uint64_t dispatch_id);
     virtual void doPackets(hsa_queue_t *queue, const packet_t *packet, uint64_t count, hsa_amd_queue_intercept_packet_writer writer);
     bool growBufferPool(hsa_agent_t agent, size_t count);
     hsa_mem_mgr *checkoutBuffer(hsa_agent_t agent);
@@ -134,7 +133,6 @@ private:
     std::vector<dh_comms::dh_comms *> buffers_;
     std::map<std::string, std::string> config_;
     std::map<hsa_signal_t, void *, hsa_cmp<hsa_signal_t>> kernargs_;
-    uint64_t dispatch_count_;
     std::atomic<bool> shutting_down_;
     std::thread signal_runner_;
     std::thread cache_watcher_;
@@ -149,7 +147,8 @@ private:
     std::map<hsa_agent_t, std::vector<dh_comms::dh_comms_descriptor>, hsa_cmp<hsa_agent_t>> descriptor_pool_;
     comms_mgr comms_mgr_;
     std::thread comms_runner_;
-    std::vector<dh_comms::message_processor_base *> mp_pool_;
+    std::vector<dh_comms::message_handler_base *> mh_pool_;
+    std::atomic<uint64_t> dispatch_count_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;

@@ -17,7 +17,7 @@ public:
     virtual void * copy_to_device(void *dst, const void *src, std::size_t size);
 private:
     hsa_agent_t agent_;
-    const pool_specs_t& pool_;
+    const pool_specs_t pool_;
     const KernArgAllocator& allocator_;
 
 };

@@ -19,7 +19,6 @@
 #include "timehelper.h"
 #include "utils.h"
 #include "dh_comms.h"
-#include "message_processor_base.h"
 
 
 typedef struct pool_specs
@@ -34,7 +33,7 @@ class comms_mgr
 public: 
     comms_mgr(HsaApiTable *pTable);
     ~comms_mgr();
-    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, dh_comms::message_processor_base& mp);
+    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id);
     bool checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object);
     bool addAgent(hsa_agent_t agent);
 private:
@@ -54,14 +53,13 @@ private:
 #define DH_SUB_BUFFER_CAPACITY (64 * 1024) 
 
 
-class default_message_processor : public dh_comms::message_processor_base
+class default_message_handler : public dh_comms::message_handler_base
 {
 public:
-    default_message_processor(std::string& strName, uint32_t dispatch_id);
-    ~default_message_processor();
-    virtual size_t operator()(char *&message_p, size_t size, size_t sub_buf_no);
-    virtual bool is_thread_safe() const;
+    default_message_handler(std::string& strName, uint32_t dispatch_id);
+    ~default_message_handler();
+    bool virtual handle(const dh_comms::message_t& message);
 private:
     std::string strKernelName_;
-    uint32_t dispatch_id_;
+    uint64_t dispatch_id_;
 };

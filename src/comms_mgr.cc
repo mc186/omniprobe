@@ -14,7 +14,7 @@ comms_mgr::~comms_mgr()
     mem_mgrs_.clear();
 }
 
-dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, dh_comms::message_processor_base& mp)
+dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     dh_comms::dh_comms_mem_mgr *mem_mgr = NULL;
@@ -22,7 +22,11 @@ dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, dh_comms:
     if (it != mem_mgrs_.end())
     {
         mem_mgr = it->second;
-        dh_comms::dh_comms *obj = new dh_comms::dh_comms(DH_SUB_BUFFER_COUNT, DH_SUB_BUFFER_CAPACITY, mp, DH_THREAD_COUNT, mem_mgr);
+        dh_comms::dh_comms *obj = new dh_comms::dh_comms(DH_SUB_BUFFER_COUNT, DH_SUB_BUFFER_CAPACITY, false, false, mem_mgr);
+        obj->append_handler(std::make_unique<default_message_handler>(strKernelName, dispatch_id));
+        obj->start();
+        return obj;
+
     }
     return NULL;
 }
@@ -30,6 +34,8 @@ dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, dh_comms:
 bool comms_mgr::checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object)
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    object->stop();
+    object->delete_handlers();
     delete object;
     return true;
 }
@@ -38,6 +44,7 @@ bool comms_mgr::checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object
 bool comms_mgr::addAgent(hsa_agent_t agent)
 {
     std::lock_guard<std::mutex> lock(mutex_);
+    std::cerr << "comms_mgr::addAgent: " << std::hex << agent.handle << std::dec << std::endl;
     std::vector<pool_specs_t> pools;
     struct parms {
         std::vector<pool_specs_t> *pools;
@@ -64,13 +71,12 @@ bool comms_mgr::addAgent(hsa_agent_t agent)
             status = hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_SIZE, &size);
             if (status != HSA_STATUS_SUCCESS)
                 throw std::bad_alloc();
+            hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
+            if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED)
+            {
+                parms->pools->push_back({parms->agent, pool, granularity});
+            }
         }
-        hsa_amd_memory_pool_get_info(pool, HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, &flags);
-        if (flags & HSA_AMD_MEMORY_POOL_GLOBAL_FLAG_COARSE_GRAINED)
-        {
-            parms->pools->push_back({parms->agent, pool, granularity});
-        }
-
         return HSA_STATUS_SUCCESS;
     }, &data);
 
@@ -92,24 +98,21 @@ bool comms_mgr::growBufferPool(hsa_agent_t agent, size_t count)
 }
 
 
-default_message_processor::default_message_processor(std::string& strName, uint32_t dispatch_id)
+default_message_handler::default_message_handler(std::string& strName, uint32_t dispatch_id)
 {
     strKernelName_ = strName;
     dispatch_id_ = dispatch_id;
 }
 
-default_message_processor::~default_message_processor()
+default_message_handler::~default_message_handler()
 {
+    std::cerr << "Message Handler is cleaned up";
 }
 
-size_t default_message_processor::operator()(char *&message_p, size_t size, size_t sub_buf_no)
+bool default_message_handler::handle(const dh_comms::message_t& message)
 {
-    cerr << "default_message_processor:\n\tMessage of size " << std::dec << size << " with " << sub_buf_no << " sub buffers\n";
-    return size;
+    std::cerr << "Message from " << strKernelName_ << " for dispatch id " << std::dec << dispatch_id_ << std::endl;
+    return true;
 }
 
 
-bool default_message_processor::is_thread_safe() const
-{
-    return false;
-}

@@ -143,7 +143,7 @@ void hsaInterceptor::cleanup()
 
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
-    dispatch_count_(0), signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), 
+    signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), 
         comms_mgr_(table), comms_runner_(comms_runner, std::ref(comms_mgr_)) 
 {
     apiTable_ = table;
@@ -293,8 +293,6 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         }
         //Put this completion signal back in the pool for subsequent dispatches
         sig_pool_.push_back(sig);
-        if (ki.mp)
-            delete ki.mp;
         if (ki.comms_obj_)
             comms_mgr_.checkinCommsObject(ki.agent_, ki.comms_obj_);
     }
@@ -579,7 +577,7 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     Pending signals and the alternative kernarg buffers are stored and processed later when the kernel completes and 
     hsaIntereceptor::signalComplete is called.
 */
-hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue)
+hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_dispatch_packet_t *packet, hsa_queue_t *queue, uint64_t dispatch_id)
 {
     hsa_kernel_dispatch_packet_t *dispatch = new hsa_kernel_dispatch_packet_t;
     *dispatch = *packet;
@@ -598,8 +596,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         }
         sig = sig_pool_.back();
         sig_pool_.pop_back();
-        dh_comms::message_processor_base *mp = NULL;
-        dh_comms::dh_comms_mem_mgr *mem_mgr = NULL;
         dh_comms::dh_comms *comms = NULL;
         uint64_t alt_kernel_object;
         // Are there any kernels in the cache?
@@ -632,14 +628,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args))
                         {
                             void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
-                            if (mp_pool_.empty())
-                                mp = new default_message_processor(kernel_objects_[dispatch->kernel_object].name_,0);
-                            else
-                            {
-                                mp = mp_pool_.back();
-                                mp_pool_.pop_back();
-                            }
-                            comms = comms_mgr_.checkoutCommsObject(queues_[queue],*mp);
+                            comms = comms_mgr_.checkoutCommsObject(queues_[queue], kernel_objects_[dispatch->kernel_object].name_, dispatch_id);
                             fixupKernArgs(new_kernargs, dispatch->kernarg_address, comms, args);
                             dispatch->kernarg_address = new_kernargs;
                             // Store the kernarg address so we can free it up at kernel completion
@@ -652,7 +641,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             }
         }
         // Store the signal for processing at kernel completion
-        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue], comms, mp};
+        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue], comms};
         //replace any pre-existing completion_signal in the dispatch. FWIW, normal HIP/ROCm codes don't use dispatch packet
         //completion signals. The typically enqueue a barrier packet immediately following a kernel dispatch packet.
         dispatch->completion_signal = sig;
@@ -673,12 +662,12 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
 */
 void hsaInterceptor::doPackets(hsa_queue_t *queue, const packet_t *packet, uint64_t count, hsa_amd_queue_intercept_packet_writer writer) {
     try {
-
         for(uint64_t i = 0; i < count; i++)
         {
             if (getHeaderType(&packet[i]) == HSA_PACKET_TYPE_KERNEL_DISPATCH)
             {
-                hsa_kernel_dispatch_packet_t *dispatch = fixupPacket(reinterpret_cast<const hsa_kernel_dispatch_packet_t *>(&packet[i]), queue);
+                uint64_t id = ++dispatch_count_;
+                hsa_kernel_dispatch_packet_t *dispatch = fixupPacket(reinterpret_cast<const hsa_kernel_dispatch_packet_t *>(&packet[i]), queue, id);
                 if (dispatch)
                 {
                     writer(dispatch, 1);
