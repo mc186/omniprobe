@@ -59,6 +59,14 @@ bool isFileNewer(const std::chrono::system_clock::time_point& timestamp, const s
     }
 }
 
+
+std::string getExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+}
+
+
 std::string getInstrumentedName(const std::string& func_decl) {
     std::string result = func_decl;
     size_t pos = result.find_last_of(')');
@@ -74,6 +82,27 @@ std::string getInstrumentedName(const std::string& func_decl) {
     }
     
     return result;
+}
+
+std::vector<std::string> getIsaList(hsa_agent_t agent)
+{
+    std::vector<std::string> list;
+    hsa_agent_iterate_isas(agent,[](hsa_isa_t isa, void *data){
+        std::vector<std::string> *pList = reinterpret_cast<std::vector<std::string> *> (data);
+           uint32_t length;
+           hsa_status_t status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME_LENGTH, 0, &length);
+           if (status == HSA_STATUS_SUCCESS)
+           {
+                char *pName = static_cast<char *>(malloc(length + 1));
+                pName[length] = '\0';
+                status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME, 0, pName);
+                std::cerr << "Isa name: " << pName << std::endl;
+                if (status == HSA_STATUS_SUCCESS)
+                    pList->push_back(std::string(pName));
+           }
+           return HSA_STATUS_SUCCESS;
+        }, reinterpret_cast<void *>(&list));   
+    return list;
 }
 
 
@@ -140,43 +169,75 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
     bool bResult = false;
     // Build the code object filename
     std::clog << "Code object filename: " << name << std::endl;
-
-    // Open the file containing code object
-    hsa_file_t file_handle = open(name.c_str(), O_RDONLY);
-    if (file_handle == -1) {
-        std::cerr << "Error: failed to load '" << name << "'" << std::endl;
-        assert(false);
-        return false;
-    }
-
-    // Create code object reader
     hsa_code_object_reader_t code_obj_rdr = {0};
-    hsa_status_t status = apiTable_->core_->hsa_code_object_reader_create_from_file_fn(file_handle, &code_obj_rdr);
-    if (status != HSA_STATUS_SUCCESS) {
-        std::cerr << "Failed to create code object reader '" << name << "'" << std::endl;
-        return false;
-    }
-
+    hsa_file_t file_handle = open(name.c_str(), O_RDONLY);
+    hsa_status_t status;
+    std::vector<uint8_t> co_bits;
+    
     // Create executable.
     hsa_executable_t executable;
     status = apiTable_->core_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
                                          NULL, &executable);
     CHECK_STATUS("Error in creating executable object", status);
+    KernelArgHelper *p_kh = NULL;
 
-    // Load code object.
-    status = apiTable_->core_->hsa_executable_load_agent_code_object_fn(executable, agent, code_obj_rdr,
-                                                     NULL, NULL);
-    if (status == HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS)
+    // Open the file containing code object
+    if (name.ends_with(".hsaco"))
     {
-        cerr << "Looks like " << name << " is not ISA compatible with this GPU\n";
-        apiTable_->core_->hsa_executable_destroy_fn(executable);
-        return false;
+        if (file_handle == -1) {
+            std::cerr << "Error: failed to load '" << name << "'" << std::endl;
+            assert(false);
+            return false;
+        }
+
+        // Create code object reader
+        status = apiTable_->core_->hsa_code_object_reader_create_from_file_fn(file_handle, &code_obj_rdr);
+        if (status != HSA_STATUS_SUCCESS) {
+            std::cerr << "Failed to create code object reader '" << name << "'" << std::endl;
+            return false;
+        }
+        // Load code object.
+        status = apiTable_->core_->hsa_executable_load_agent_code_object_fn(executable, agent, code_obj_rdr,
+                                                         NULL, NULL);
+        if (status == HSA_STATUS_ERROR_INCOMPATIBLE_ARGUMENTS)
+        {
+            cerr << "Looks like " << name << " is not ISA compatible with this GPU\n";
+            apiTable_->core_->hsa_executable_destroy_fn(executable);
+            return false;
+        }
+        else
+        {
+            CHECK_STATUS("Error in loading executable object", status);
+            return false;
+        }
+        p_kh = new KernelArgHelper(name); 
     }
     else
-        CHECK_STATUS("Error in loading executable object", status);
+    {
+        KernelArgHelper::getElfSectionBits(name,std::string(".hip_fatbin"), co_bits);
+        if (co_bits.size())
+        {
+            amd_comgr_code_object_info_t info = KernelArgHelper::getCodeObjectInfo(agent, co_bits);
+            if (info.size)
+            {
+                status = apiTable_->core_->hsa_code_object_reader_create_from_memory_fn(co_bits.data() + info.offset, info.size, &code_obj_rdr);
+                if (status != HSA_STATUS_SUCCESS)
+                    throw std::runtime_error("Could not create code reader from fat binary bits");
+                status = apiTable_->core_->hsa_executable_load_agent_code_object_fn(executable, agent, code_obj_rdr, NULL, NULL);
+                if (status != HSA_STATUS_SUCCESS)
+                    throw std::runtime_error("Could not load code object from fat binary bits");
+            }
+            p_kh = new KernelArgHelper(agent, co_bits);
+        }
+        else
+            return false;
+    }
+
+
 
     // Freeze executable.
     status = apiTable_->core_->hsa_executable_freeze_fn(executable, "");
+    std::cerr << "Status on freeze: " << std::hex << status << std::endl;
     CHECK_STATUS("Error in freezing executable object", status);
 
     // Get symbol handle.
@@ -188,7 +249,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
         return HSA_STATUS_SUCCESS;
     }, reinterpret_cast<void *>(&symbols));
 
-    KernelArgHelper kh(name);
+    //KernelArgHelper kh(name);
 
     cerr << "coCache found " << symbols.size() << " symbols\n";
     for (auto sym : symbols)
@@ -221,7 +282,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
 
                 string strName = demangleName(name);
                 arg_descriptor_t desc;
-                if (kh.getArgDescriptor(strName, desc))
+                if (p_kh->getArgDescriptor(strName, desc))
                 {
                    lock_guard<std::mutex> lock(mutex_);
                    auto itMap = arg_map_.find(agent);
@@ -249,6 +310,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
         cache_objects_[agent] = {executable, name, std::chrono::system_clock::now()};
     }
     close(file_handle);
+    delete p_kh;
     return bResult;
 }
     
@@ -258,21 +320,24 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
     if (directory.length())
     {
         location_ = directory;
-        try {
-            for (const auto& entry : fs::directory_iterator(directory)) {
-                if (entry.is_regular_file() && entry.path().extension() == ".hsaco") {
-                    filelist_.push_back(entry.path().string());
+        if (std::filesystem::is_directory(directory))
+        {
+            try {
+                for (const auto& entry : fs::directory_iterator(directory)) {
+                    if (entry.is_regular_file() && entry.path().extension() == ".hsaco") {
+                        filelist_.push_back(entry.path().string());
+                    }
                 }
-            }
 
-            for (auto file : filelist_)
-            {
-                addFile(file, agent);
+                for (auto file : filelist_)
+                {
+                    addFile(file, agent);
+                }
+            } catch (const fs::filesystem_error& e) {
+                std::cerr << "Filesystem error: " << e.what() << std::endl;
+            } catch (const std::exception& e) {
+                std::cerr << "General exception: " << e.what() << std::endl;
             }
-        } catch (const fs::filesystem_error& e) {
-            std::cerr << "Filesystem error: " << e.what() << std::endl;
-        } catch (const std::exception& e) {
-            std::cerr << "General exception: " << e.what() << std::endl;
         }
     }
     return filelist_.size() != 0;
@@ -489,6 +554,14 @@ KernArgAllocator::~KernArgAllocator()
 
 KernelArgHelper::KernelArgHelper(const std::string file_name)
 {
+    /*
+     * Load and pull kernel argument data out of an .hsaco file
+     * This code makes no assumptions about what ISA is supported
+     * on this system or whether the code will actually run.
+     * It is built to assume something akin to the Triton
+     * JITed code cache and that if this is called, the code is known
+     * to work on some agent on this system.
+    */
     amd_comgr_data_t executable;
     std::vector<char> buff;
     std::ifstream file(file_name, std::ios::binary | std::ios::ate);
@@ -530,10 +603,99 @@ KernelArgHelper::~KernelArgHelper()
 {
 }
 
-KernelArgHelper::KernelArgHelper(const unsigned char *bits, size_t length)
+amd_comgr_code_object_info_t KernelArgHelper::getCodeObjectInfo(hsa_agent_t agent, std::vector<uint8_t>& bits)
 {
+    amd_comgr_data_t executable, bundle;
+    std::vector<std::string> isas = getIsaList(agent);
+    CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_FATBIN, &bundle));
+    CHECK_COMGR(amd_comgr_set_data(bundle, bits.size(), reinterpret_cast<const char *>(bits.data())));
+    if (isas.size())
+    {
+        std::vector<amd_comgr_code_object_info_t> ql;
+        for (int i = 0; i < isas.size(); i++)
+            ql.push_back({isas[i].c_str(),0,0});
+        for(auto co : ql)
+            std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
+        std::cerr << "query list size: " << ql.size() << std::endl;
+        CHECK_COMGR(amd_comgr_lookup_code_object(bundle,static_cast<amd_comgr_code_object_info_t *>(ql.data()), ql.size()));
+        for (auto co : ql)
+        {
+            std::cerr << "After query: " << std::endl;
+            std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
+            /* Use the first code object that is ISA-compatible with this agent */
+            if (co.size != 0)
+            {
+                CHECK_COMGR(amd_comgr_release_data(bundle));
+                return co;
+            }
+        }   
+    }
+    CHECK_COMGR(amd_comgr_release_data(bundle));
+    return {0,0,0};
 }
 
+KernelArgHelper::KernelArgHelper(hsa_agent_t agent, std::vector<uint8_t>& bits)
+{
+    /*
+     * This code is given bits from a fat binary and needs to find a code object
+     * Since fat binaries can contain code objects for multiple ISAs, we use
+     * the supplied agent to find a code object that will run on that agent */
+
+    amd_comgr_data_t executable, bundle;
+    std::vector<std::string> isas = getIsaList(agent);
+    CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_FATBIN, &bundle));
+    CHECK_COMGR(amd_comgr_set_data(bundle, bits.size(), reinterpret_cast<const char *>(bits.data())));
+    if (isas.size())
+    {
+        std::vector<amd_comgr_code_object_info_t> ql;
+        for (int i = 0; i < isas.size(); i++)
+            ql.push_back({isas[i].c_str(),0,0});
+        CHECK_COMGR(amd_comgr_lookup_code_object(bundle,static_cast<amd_comgr_code_object_info_t *>(ql.data()), ql.size()));
+        for (auto co : ql)
+        {
+            /* Use the first code object that is ISA-compatible with this agent */
+            if (co.size != 0)
+            {
+                addCodeObject(reinterpret_cast<const char *>(bits.data() + co.offset), co.size);
+                break;
+            }
+        }   
+    }
+    CHECK_COMGR(amd_comgr_release_data(bundle));
+}
+    
+void KernelArgHelper::addCodeObject(const char *bits, size_t length)
+{
+    amd_comgr_data_t executable;
+    CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &executable));
+    CHECK_COMGR(amd_comgr_set_data(executable, length, bits));
+    amd_comgr_metadata_node_t metadata;
+    CHECK_COMGR(amd_comgr_get_data_metadata(executable, &metadata));
+    amd_comgr_metadata_kind_t md_kind;
+    CHECK_COMGR(amd_comgr_get_metadata_kind(metadata, &md_kind));
+
+    if (md_kind == AMD_COMGR_METADATA_KIND_MAP)
+    {
+        std::string strIndent("");
+        std::map<std::string, arg_descriptor_t> parms; 
+        computeKernargData(metadata);
+    }
+    CHECK_COMGR(amd_comgr_release_data(executable));
+
+}
+
+void KernelArgHelper::getSharedLibraries(std::vector<std::string>& libraries) {
+    dl_iterate_phdr([](struct dl_phdr_info *info, size_t size, void *data){
+        std::vector<std::string>* p_libraries = static_cast<std::vector<std::string>*>(data);
+        
+        if (info->dlpi_name && *info->dlpi_name) {  // Filter out empty names
+            p_libraries->push_back(std::string(info->dlpi_name));
+        }
+        
+        return 0;  // Continue iteration
+    }, &libraries);
+    return;
+}
 std::string KernelArgHelper::get_metadata_string(amd_comgr_metadata_node_t node)
 {
     std::string strValue;
@@ -547,6 +709,51 @@ std::string KernelArgHelper::get_metadata_string(amd_comgr_metadata_node_t node)
         CHECK_COMGR(amd_comgr_get_metadata_string(node, &size, &strValue[0]));
     }
     return strValue;
+}
+
+// Function to read the bits of a specific section from an ELF binary
+void KernelArgHelper::getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData ) {
+    std::ifstream file(fileName, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Could not open file: " + fileName);
+    }
+
+    // Read ELF header
+    Elf64_Ehdr elfHeader;
+    file.read(reinterpret_cast<char*>(&elfHeader), sizeof(elfHeader));
+
+    // Check if it's an ELF file
+    if (memcmp(elfHeader.e_ident, ELFMAG, SELFMAG) != 0) {
+        throw std::runtime_error("Not a valid ELF file");
+    }
+
+    // Seek to the section header table
+    file.seekg(elfHeader.e_shoff, std::ios::beg);
+
+    // Read all section headers
+    std::vector<Elf64_Shdr> sectionHeaders(elfHeader.e_shnum);
+    file.read(reinterpret_cast<char*>(sectionHeaders.data()), elfHeader.e_shnum * sizeof(Elf64_Shdr));
+
+    // Seek to the section header string table
+    const Elf64_Shdr &shstrtab = sectionHeaders[elfHeader.e_shstrndx];
+    std::vector<char> shstrtabData(shstrtab.sh_size);
+    file.seekg(shstrtab.sh_offset, std::ios::beg);
+    file.read(shstrtabData.data(), shstrtab.sh_size);
+
+    // Find the section by name
+    for (const auto &section : sectionHeaders) {
+        std::string currentSectionName(&shstrtabData[section.sh_name]);
+
+        if (currentSectionName == sectionName) {
+            // Read the section data
+            sectionData.resize(section.sh_size);
+            file.seekg(section.sh_offset, std::ios::beg);
+            file.read(reinterpret_cast<char*>(sectionData.data()), section.sh_size);
+            return;  // Return the section bits
+        }
+    }
+
+    throw std::runtime_error("Section not found: " + sectionName);
 }
 
 void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
@@ -569,6 +776,7 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
             amd_comgr_metadata_node_t field;
             CHECK_COMGR(amd_comgr_metadata_lookup(value,".symbol", &field));
             std::string strName = get_metadata_string(field);
+            strName = demangleName(strName.c_str());
             arg_descriptor_t desc = {0,0,0};
             amd_comgr_metadata_node_t args;
             CHECK_COMGR(amd_comgr_metadata_lookup(value, ".args", &args));
@@ -613,6 +821,15 @@ bool KernelArgHelper::getArgDescriptor(const std::string& strName, arg_descripto
     {
         bSuccess = true;
         desc = it->second;
+        std::cerr << strName << " {" << desc.explicit_args_length << ", " << desc.hidden_args_length << ", " << desc.kernarg_length << "}\n";
+    }
+    else
+    {
+        std::cerr << "getArgDescriptor: Looking for " << strName << " but I only now about -\n";
+        for (auto it : kernels_)
+        {
+            std::cerr << "\t" << it.first << std::endl;
+        }
     }
     return bSuccess;
 }

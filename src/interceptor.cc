@@ -172,8 +172,30 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                 std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
                 for (auto agent : gpus)
                 {
+                    /* If we're running Triton, the user needs to specify the location of the Triton
+                     * code object cache directory - usually in $HOME/.triton/cache */
                     if (cacheLocation.length())
                         kernel_cache_.setLocation(agent, cacheLocation);
+                    else
+                    {
+                        /* If a KERNEL_CACHE directory is not supplied, we look for all the kernels in fat binaries
+                         * (this will be the normal case for, say, HIP applications. */
+                        std::vector<std::string>files;
+                        files.push_back(getExecutablePath());
+                        KernelArgHelper::getSharedLibraries(files);
+                        for (auto file : files)
+                        {
+                            std::cerr << "File with a possible .fatbin section: " << file << std::endl;
+                            try
+                            {
+                                kernel_cache_.addFile(file, agent);
+                            }
+                            catch (const std::runtime_error e)
+                            {
+                                continue;
+                            }
+                        }
+                    }
                     comms_mgr_.addAgent(agent);
                 }
             }
@@ -639,7 +661,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             }
         }
         // Store the signal for processing at kernel completion
-        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[dispatch->kernel_object].name_, queues_[queue], comms};
+        pending_signals_[sig] = {dispatch->completion_signal, kernel_objects_[packet->kernel_object].name_, queues_[queue], comms};
         //replace any pre-existing completion_signal in the dispatch. FWIW, normal HIP/ROCm codes don't use dispatch packet
         //completion signals. The typically enqueue a barrier packet immediately following a kernel dispatch packet.
         dispatch->completion_signal = sig;

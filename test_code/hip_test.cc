@@ -308,7 +308,8 @@ std::map<hsa_agent_t, std::vector<std::string>, hsa_cmp<hsa_agent_t>> getIsaByAg
 int main() {
     try {
         hsa_init();
-        std::string fileName = "/work1/amd/klowery/dh_comms/build/examples/bin/heatmap_example";
+        //std::string fileName = "/work1/amd/klowery/dh_comms/build/examples/bin/heatmap_example";
+        std::string fileName = "/work1/amd/klowery/logduration/src/test/quicktest";
         std::string sectionName = ".hip_fatbin"; // Example section
         std::vector<uint8_t> sectionBits = getElfSectionBits(fileName, sectionName);
 
