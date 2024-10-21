@@ -374,7 +374,7 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
             CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&alt_kernarg_size)));
             CHECK_STATUS("Unable to get kernel_object", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
             object = alt_kernel_object;
-            cout << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
+            cerr << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
             auto ksit = kernarg_sizes_.find(alt_kernel_object);
             if (ksit == kernarg_sizes_.end())
                 kernarg_sizes_[alt_kernel_object] = alt_kernarg_size;
@@ -428,7 +428,7 @@ logDuration::logDuration()
         log_file_ = &cout;
     else
         log_file_ = new std::ofstream(location_, std::ios::app);
-    (*log_file_) << "kernel,dispatch,startNs,endNs" << std::endl;
+    //(*log_file_) << "kernel,dispatch,startNs,endNs" << std::endl;
 }
 
 logDuration::logDuration(std::string& location)
@@ -438,7 +438,7 @@ logDuration::logDuration(std::string& location)
         log_file_ = &cout;
     else
         log_file_ = new std::ofstream(location, std::ios::app);
-    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
+    //*log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
 }
 
 logDuration::~logDuration()
@@ -459,7 +459,7 @@ void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t s
 
 bool logDuration::setLocation(const std::string& strLocation)
 {
-    if (location_ != "console" && location_ != "/dev/null")
+    if (location_ != "console")
     {
         if (log_file_)
             delete log_file_;
@@ -603,6 +603,23 @@ KernelArgHelper::~KernelArgHelper()
 {
 }
 
+/*
+ * The bits vector passed to this function is created by reading the .fatbin section of an elf binary.
+ * These bits take the form of a bundle of code objects, with each code object in the bundle representing
+ * A different ISA. This function does the following:
+ *   1. Query all the isa's supported by the agent supplied as a parameter. It's theoretically possible
+ *      for an agent to support more than one ISA. the call to getIsaList returns a vector of ISA names.
+ *   2. Create a FATBIN comgr data object and set the bits into an object of that type.
+ *   3. To find a code object that will run on the supplied agent, this function creates an array of 
+ *      code object info structures, Each of these structures contains a pointer to the isa name,
+ *      and the code object offset and length are set to zero.
+ *   4. This array of code_object_info structs is passed to a comgr helper function (i.e. lookup_code_object)
+ *      to find the offset and length for any code objects in the bundle that match one of the isas supported
+ *      by the agent passed in to this method.
+ *   5. The first code_object_info struct in the array that has had its offset and length initialized to non-zero
+ *      is used to create an executable which can be used to query kernel argument metadata for any kernels in
+ *      the code object. */
+
 amd_comgr_code_object_info_t KernelArgHelper::getCodeObjectInfo(hsa_agent_t agent, std::vector<uint8_t>& bits)
 {
     amd_comgr_data_t executable, bundle;
@@ -663,6 +680,10 @@ KernelArgHelper::KernelArgHelper(hsa_agent_t agent, std::vector<uint8_t>& bits)
     }
     CHECK_COMGR(amd_comgr_release_data(bundle));
 }
+
+/* Given the bits of a code object, create an instance of a comgr executable
+ * and siphon out all of the kernel argument metadata needed later on 
+ * when we rewrite kernargs to inject a pointer to a dh_comms object. */
     
 void KernelArgHelper::addCodeObject(const char *bits, size_t length)
 {
@@ -683,7 +704,11 @@ void KernelArgHelper::addCodeObject(const char *bits, size_t length)
     CHECK_COMGR(amd_comgr_release_data(executable));
 
 }
-
+/* A helper function to create a list of all the shared libraries in use by the current
+ * process. This is needed for HIP-style applications where, rather than utilizing 
+ * a code object cache of .hsaco files (e.g. the way Triton works), the application
+ * is s HIP application where the instrumented clones are bound to the executable in
+ * a fat binary */
 void KernelArgHelper::getSharedLibraries(std::vector<std::string>& libraries) {
     dl_iterate_phdr([](struct dl_phdr_info *info, size_t size, void *data){
         std::vector<std::string>* p_libraries = static_cast<std::vector<std::string>*>(data);
@@ -711,7 +736,10 @@ std::string KernelArgHelper::get_metadata_string(amd_comgr_metadata_node_t node)
     return strValue;
 }
 
-// Function to read the bits of a specific section from an ELF binary
+// Function to read the bits of a specific section from an ELF binary. This is a helper function
+// used to get the bits of the .hip_fatbin section which contains the code object bundle we
+// will use to find a code object with an ISA that is compatible with the agent running
+// on this machine.
 void KernelArgHelper::getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData ) {
     std::ifstream file(fileName, std::ios::binary);
     if (!file) {
@@ -755,6 +783,17 @@ void KernelArgHelper::getElfSectionBits(const std::string &fileName, const std::
 
     throw std::runtime_error("Section not found: " + sectionName);
 }
+
+/* The way instrumented clones are created, the compiler adds a void * parameter to the end of the parameter list 
+ * of the instrumented kernel. The void * is actually expected to be a pointer to device memory to a dh_comms::dh_comms_descriptor
+ * At runtime, this library silently replaces the application's kernel with an instrumentd equivalent that has the added void *
+ * parameter. But that means the kernel args passed to the original kernel are incomplete. So we have to create
+ * a new kernarg segement that contains the approprate device memory pointer in its last argument.
+ * kernarg segments contain both explicit and implicit (or hidden) parameters. The pointer to the dh_comms_descriptor has
+ * to be inserted between the original explicit arguments and the first implicit argument. Therefore, in order
+ * to reconstruct a kernarg segment that will work, we need to know the layout, especially where in the kernarg
+ * segment we need to insert the dh_comms_descriptor *. This method extracts the relevant metadata
+ * from a code object exectuble needed to reconstruct a kernarg segment for an instrumented kernel.*/
 
 void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
 {

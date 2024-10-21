@@ -808,7 +808,7 @@ hsa_status_t hsaInterceptor::hsa_executable_symbol_get_info(hsa_executable_symbo
                     }
                     else
                     {
-                        std::cout << "KERNEL HAS NO NAME!!!\n";
+                        std::cerr << "KERNEL HAS NO NAME!!!\n";
                     }
                 }
                 free(reinterpret_cast<void *>(name));
@@ -854,9 +854,9 @@ extern "C" {
 
     PUBLIC_API bool OnLoad(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count,
                            const char* const* failed_tool_names) {
-        cout << "Trying to init hsaInterceptor" << endl;
+        cerr << "Trying to init hsaInterceptor" << endl;
         hsaInterceptor *hook = hsaInterceptor::getInstance(table, runtime_version, failed_tool_count, failed_tool_names);
-        cout << "hsaInterceptor: Initializing: 0x" << hex << hook << endl;
+        cerr << "hsaInterceptor: Initializing: 0x" << hex << hook << endl;
 
         return true;
     }
