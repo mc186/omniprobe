@@ -192,6 +192,13 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                             }
                             catch (const std::runtime_error e)
                             {
+                                /* I catch this exception because the shared libraries returned by getSharedLibraries
+                                 * can include system libs that do not have the full path to the .so file
+                                 * these files will cause addFile() to throw a runtime exception.
+                                 * these exceptions are benign for our purposes because any shared lib
+                                 * we might be interested in (i.e. the ones that contain .hip_fatbin sections)
+                                 * will enumerate from getSharedLibraries with a full path to the file. 
+                                 * so we catch this exception and continue */
                                 continue;
                             }
                         }
@@ -864,7 +871,7 @@ extern "C" {
     PUBLIC_API void OnUnload() {
         // cout << "ROCMHOOK: Unloading" << endl;
         hsaInterceptor::cleanup();
-        cerr << "hsaInterceptor: Application elapsed usecs: " << globalTime.getElapsedNanos() / 1000 << "us\n";
+        cerr << "hsaInterceptor: Application elapsed usecs: " << std::dec << globalTime.getElapsedNanos() / 1000 << "us\n";
     }
 
    /* static void unload_me() __attribute__((destructor));
