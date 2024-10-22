@@ -96,7 +96,7 @@ std::vector<std::string> getIsaList(hsa_agent_t agent)
                 char *pName = static_cast<char *>(malloc(length + 1));
                 pName[length] = '\0';
                 status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME, 0, pName);
-                std::cerr << "Isa name: " << pName << std::endl;
+                //std::cerr << "Isa name: " << pName << std::endl;
                 if (status == HSA_STATUS_SUCCESS)
                     pList->push_back(std::string(pName));
            }
@@ -172,7 +172,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
 {
     bool bResult = false;
     // Build the code object filename
-    std::clog << "Code object filename: " << name << std::endl;
+    //std::clog << "Code object filename: " << name << std::endl;
     hsa_code_object_reader_t code_obj_rdr = {0};
     hsa_file_t file_handle = open(name.c_str(), O_RDONLY);
     hsa_status_t status;
@@ -241,7 +241,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
 
     // Freeze executable.
     status = apiTable_->core_->hsa_executable_freeze_fn(executable, "");
-    std::cerr << "Status on freeze: " << std::hex << status << std::endl;
+    //std::cerr << "Status on freeze: " << std::hex << status << std::endl;
     CHECK_STATUS("Error in freezing executable object", status);
 
     // Get symbol handle.
@@ -255,7 +255,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
 
     //KernelArgHelper kh(name);
 
-    cerr << "coCache found " << symbols.size() << " symbols\n";
+    //cerr << "coCache found " << symbols.size() << " symbols\n";
     for (auto sym : symbols)
     {
         hsa_symbol_kind_t kind;
@@ -288,7 +288,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
                 arg_descriptor_t desc;
                 if (p_kh->getArgDescriptor(strName, desc))
                 {
-                   std::cerr << "Adding arg descriptor to coCache for " << strName << " of length " << std::dec << strName.size() << std::endl;
+                   //std::cerr << "Adding arg descriptor to coCache for " << strName << " of length " << std::dec << strName.size() << std::endl;
                    lock_guard<std::mutex> lock(mutex_);
                    auto itMap = arg_map_.find(agent);
                    if (itMap != arg_map_.end())
@@ -379,7 +379,7 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
             CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&alt_kernarg_size)));
             CHECK_STATUS("Unable to get kernel_object", hsa_executable_symbol_get_info_fn(kern_it->second, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&alt_kernel_object)));
             object = alt_kernel_object;
-            cerr << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
+            //cerr << "kernarg_size = " << kernarg_size << "\nalt_kernarg_size = " << alt_kernarg_size << "\nInstrumentation buffer size = " << sizeof(INSTRUMENTATION_BUFFER) << std::endl;
             auto ksit = kernarg_sizes_.find(alt_kernel_object);
             if (ksit == kernarg_sizes_.end())
                 kernarg_sizes_[alt_kernel_object] = alt_kernarg_size;
@@ -478,7 +478,7 @@ bool logDuration::setLocation(const std::string& strLocation)
         if (log_file_)
             delete log_file_;
     }
-    cerr << "logDuration::setLocation = " << strLocation << std::endl;
+    //cerr << "logDuration::setLocation = " << strLocation << std::endl;
     location_ = strLocation;
     if (!location_.length())
         location_ = "/dev/null";
@@ -645,14 +645,14 @@ amd_comgr_code_object_info_t KernelArgHelper::getCodeObjectInfo(hsa_agent_t agen
         std::vector<amd_comgr_code_object_info_t> ql;
         for (int i = 0; i < isas.size(); i++)
             ql.push_back({isas[i].c_str(),0,0});
-        for(auto co : ql)
-            std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
-        std::cerr << "query list size: " << ql.size() << std::endl;
+        //for(auto co : ql)
+        //    std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
+        //std::cerr << "query list size: " << ql.size() << std::endl;
         CHECK_COMGR(amd_comgr_lookup_code_object(bundle,static_cast<amd_comgr_code_object_info_t *>(ql.data()), ql.size()));
         for (auto co : ql)
         {
-            std::cerr << "After query: " << std::endl;
-            std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
+            //std::cerr << "After query: " << std::endl;
+            //std::cerr << "{" << co.isa << "," << co.size << "," << co.offset << "}" << std::endl;
             /* Use the first code object that is ISA-compatible with this agent */
             if (co.size != 0)
             {
@@ -877,14 +877,14 @@ bool KernelArgHelper::getArgDescriptor(const std::string& strName, arg_descripto
     {
         bSuccess = true;
         desc = it->second;
-        std::cerr << strName << " {" << desc.explicit_args_length << ", " << desc.hidden_args_length << ", " << desc.kernarg_length << "}\n";
+        //std::cerr << strName << " {" << desc.explicit_args_length << ", " << desc.hidden_args_length << ", " << desc.kernarg_length << "}\n";
     }
     else
     {
-        std::cerr << "getArgDescriptor: Looking for " << strName << " but I only now about -\n";
+        //std::cerr << "getArgDescriptor: Looking for " << strName << " but I only now about -\n";
         for (auto it : kernels_)
         {
-            std::cerr << "\t" << it.first << std::endl;
+          //  std::cerr << "\t" << it.first << std::endl;
         }
     }
     return bSuccess;

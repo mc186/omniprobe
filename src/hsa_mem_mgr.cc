@@ -28,8 +28,8 @@ hsa_mem_mgr::hsa_mem_mgr(hsa_agent_t agent, const pool_specs_t& pool, const Kern
     memset(name, 0, sizeof(name));
     uint32_t length = sizeof(name);
     hsa_agent_get_info(pool.agent_, HSA_AGENT_INFO_NAME, name);
-    std::cerr << "AGENT NAME in hsa_mem_mgr: " << name << std::endl;
-    std::cerr << "agent: " << std::hex << pool.agent_.handle << " pool: " << pool.pool_.handle << " min_alloc_size: " << std::dec << pool.min_alloc_size_ << std::endl; 
+    //std::cerr << "AGENT NAME in hsa_mem_mgr: " << name << std::endl;
+    //std::cerr << "agent: " << std::hex << pool.agent_.handle << " pool: " << pool.pool_.handle << " min_alloc_size: " << std::dec << pool.min_alloc_size_ << std::endl; 
 }
 
 hsa_mem_mgr::~hsa_mem_mgr()
@@ -71,9 +71,9 @@ void * hsa_mem_mgr::alloc_device_memory(std::size_t size)
 {
     void *buffer = NULL;
     size_t mask = pool_.min_alloc_size_ - 1;
-    std::cerr << "hsa_mem_mgr pool min size == " << pool_.min_alloc_size_ << " mask == " << std::hex << mask << std::endl;
+    //std::cerr << "hsa_mem_mgr pool min size == " << pool_.min_alloc_size_ << " mask == " << std::hex << mask << std::endl;
     size_t adjusted_size = (size + mask) & ~mask; // round up allocation to be even numbers of allocation granularity
-    std::cerr << "thus adjusted size == " << adjusted_size << std::endl;
+    //std::cerr << "thus adjusted size == " << adjusted_size << std::endl;
     hsa_status_t status = hsa_amd_memory_pool_allocate(pool_.pool_, adjusted_size, 0, &buffer);
     if (status != HSA_STATUS_SUCCESS)
         throw std::bad_alloc();

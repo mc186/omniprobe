@@ -28,7 +28,6 @@ def get_rocm_path():
 
 def get_omniprobe_home():
     tmp = os.path.dirname(__file__)
-    print(tmp)
     nodes = tmp.split("/")
     if nodes[len(nodes) - 2] == '.':
         tmp = "/".join(nodes[len(nodes) - 2])
@@ -39,11 +38,18 @@ rocm_path = get_rocm_path()
 
 op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/lib/liblogDuration64.so"}
 
-def setup_env():
+def setup_env(parms):
     global op_run_env
     env = os.environ
-    for key in op_run_env:
-        env[key] = op_run_env[key]
+    if len(parms.cache_location):
+        if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
+            env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+    else:
+        print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
+    if parms.instrumented == True:
+        env['LOGDUR_INSTRUMENTED'] = "true"
+    env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
+    #print(env)
     return env
 
 
@@ -55,7 +61,6 @@ def load_config_files():
         f = open(f"{config_path}/{file}", "r")
         txt = f.read()
         p = eval(txt)
-        print(p)
         if isinstance(p, dict):
             keys = p.keys();
             for key in keys:
@@ -63,7 +68,6 @@ def load_config_files():
                     print(f"Duplicate configuration value for {key} in {config_path}/config/{file}")
                 else:
                     op_run_env[key] = p[key]
-        print(op_run_env)
 
 def console_log(*argv, indent_level=0):
     indent = ""
@@ -116,7 +120,6 @@ def capture_subprocess_output(subprocess_args, new_env=None):
             env=new_env,
         )
     )
-    print(process)
     # Create callback function for process output
     buf = io.StringIO()
 
@@ -175,6 +178,17 @@ def add_general_group(parser):
         default="",
         help="\tKernel filters to define which kernels are instrumented"
     )
+    general_group.add_argument (
+        "-i",
+        "--instrumented",
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        metavar="",
+        dest="instrumented",
+        required=False,
+        default=0,
+        help="\tRun instrumented kernels"
+    )
     
     general_group.add_argument (
         "-d",
@@ -194,7 +208,7 @@ def add_general_group(parser):
         metavar="",
         dest="cache_location",
         required=False,
-        default="all",
+        default="",
         help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
     )
     
@@ -231,7 +245,7 @@ def add_general_group(parser):
 
 def parse_args():
     parser = argparse.ArgumentParser(description = "Command-line interface for running intra-kernel analytics on AMD Instinct GPUs",
-        prog="sentinel",
+        prog="omniprobe",
         formatter_class = lambda prog: argparse.RawTextHelpFormatter(
                 prog, max_help_position=30
             ),
@@ -254,10 +268,10 @@ def main():
     load_config_files()
     parms  = parse_args()
     global op_run_env
-    print(parms)
     if len(parms.remaining) != 0:
         print(f"Trying to run {parms.remaining[1:]}")
-        capture_subprocess_output(parms.remaining[1:], setup_env())
+        capture_subprocess_output(parms.remaining[1:], setup_env(parms))
+        
 
 if __name__ == "__main__":
     main()

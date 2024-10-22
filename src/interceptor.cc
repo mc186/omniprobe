@@ -185,7 +185,7 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                         KernelArgHelper::getSharedLibraries(files);
                         for (auto file : files)
                         {
-                            std::cerr << "File with a possible .fatbin section: " << file << std::endl;
+                            //std::cerr << "File with a possible .fatbin section: " << file << std::endl;
                             try
                             {
                                 kernel_cache_.addFile(file, agent);
@@ -209,7 +209,7 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
-    cerr << "Joining the signal runner\n";
+    //cerr << "Joining the signal runner\n";
     signal_runner_.join();
     cache_watcher_.join();
     comms_runner_.join();
@@ -331,7 +331,7 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
 
 void comms_runner(comms_mgr& mgr)
 {
-    cerr << "Comms Runner\n";
+    //cerr << "Comms Runner\n";
     hsaInterceptor *me = hsaInterceptor::getInstance();
     while (!me->shuttingdown())
     {
@@ -342,7 +342,7 @@ void comms_runner(comms_mgr& mgr)
 
 void cache_watcher()
 {
-    cerr << "Cache Watcher\n";;
+    //cerr << "Cache Watcher\n";;
     hsaInterceptor *me = hsaInterceptor::getInstance();
     std::string dir = me->getCacheLocation();
     if (dir.length())
@@ -363,7 +363,7 @@ void cache_watcher()
                 if (wd != -1)
                 {
                     watch_map[wd] = entry.path().string();
-                    cerr << "Added " << entry.path().string() << " to watch list\n";
+                    //cerr << "Added " << entry.path().string() << " to watch list\n";
                 }
             }
         }
@@ -379,7 +379,7 @@ void cache_watcher()
         else
         {
             watch_map[wd] = dir.c_str();
-            printf("Watching directory '%s' for changes.\n", dir.c_str());
+            //printf("Watching directory '%s' for changes.\n", dir.c_str());
         }
         while (!me->shuttingdown())
         {
@@ -427,9 +427,9 @@ void cache_watcher()
                                     }
                                     else if (strNewDirectory.ends_with(".hsaco"))
                                     {
-                                        cerr << "New code object to process";
+                                        //cerr << "New code object to process";
                                     }
-                                    cerr << "The file/directory " << event->name << "was created in directory " << watch_map[event->wd] << std::endl;
+                                    //cerr << "The file/directory " << event->name << "was created in directory " << watch_map[event->wd] << std::endl;
                                 }
                                 else if (event->mask & IN_DELETE)
                                 {
@@ -437,8 +437,7 @@ void cache_watcher()
                                 }
                                 else if (event->mask & IN_MODIFY)
                                 {
-                                    cerr << "The file/directory " << event->name << "was modified in directory " << watch_map[event->wd] << std::endl;
-                                    //printf("The file %s was modified in directory %s.\n", event->name, dir);
+                                    //cerr << "The file/directory " << event->name << "was modified in directory " << watch_map[event->wd] << std::endl;
                                 }
                                 else if (event->mask & IN_MOVED_FROM)
                                 {
@@ -451,11 +450,11 @@ void cache_watcher()
                                     strFileName += event->name;
                                     if (strFileName.ends_with(".hsaco"))
                                     {
-                                        cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
+                                        //cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
                                         me->addCodeObject(strFileName);                                        
                                     }
-                                    else
-                                        cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
+                                    //else
+                                    //    cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
                                     //printf("The file %s was moved into directory %s.\n", event->name, dir);
                                 }
                             }
@@ -687,8 +686,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         }
                     }*/
                 }
-                else
-                    cerr << "No alternative kernel\n";
             }
         }
         // Store the signal for processing at kernel completion
@@ -885,9 +882,9 @@ extern "C" {
 
     PUBLIC_API bool OnLoad(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count,
                            const char* const* failed_tool_names) {
-        cerr << "Trying to init hsaInterceptor" << endl;
+        //cerr << "Trying to init hsaInterceptor" << endl;
         hsaInterceptor *hook = hsaInterceptor::getInstance(table, runtime_version, failed_tool_count, failed_tool_names);
-        cerr << "hsaInterceptor: Initializing: 0x" << hex << hook << endl;
+        //cerr << "hsaInterceptor: Initializing: 0x" << hex << hook << endl;
 
         return true;
     }

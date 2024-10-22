@@ -70,7 +70,7 @@ bool comms_mgr::checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object
 bool comms_mgr::addAgent(hsa_agent_t agent)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::cerr << "comms_mgr::addAgent: " << std::hex << agent.handle << std::dec << std::endl;
+    //std::cerr << "comms_mgr::addAgent: " << std::hex << agent.handle << std::dec << std::endl;
     std::vector<pool_specs_t> pools;
     struct parms {
         std::vector<pool_specs_t> *pools;
