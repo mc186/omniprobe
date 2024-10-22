@@ -41,11 +41,19 @@ op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirnam
 def setup_env(parms):
     global op_run_env
     env = os.environ
+    if len(parms.log_location):
+        if os.path.exists(parms.log_location) and not os.path.isdir(parms.log_location):
+            env['LOGDUR_LOG_LOCATION'] = parms.log_location
+        else:
+            print(f"WARNING: log location {parms.log_location} either doesn't exist or it is a directory. Will log to the console.")
+    else:
+        env['LOGDUR_LOG_LOCATION'] = "console"
     if len(parms.cache_location):
+        print("Cache location: " + parms.cache_location)
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
-    else:
-        print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
+        else:
+            print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
