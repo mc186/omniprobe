@@ -39,6 +39,7 @@ THE SOFTWARE.
 #include "timehelper.h"
 #include "utils.h"
 #include "dh_comms.h"
+#include "memory_heatmap.h"
 
 
 typedef struct pool_specs

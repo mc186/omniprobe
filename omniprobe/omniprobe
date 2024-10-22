@@ -20,14 +20,39 @@ import logging
 #AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE=[some .bc file used by llvm plugin]
 #LLVM_PASS_PLUGIN=[location of plugin.so]
 
-op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": "./liblogduration64.so"} 
+def get_rocm_path():
+    tmp = shutil.which("rocminfo")
+    nodes = tmp.split("/")
+    if len(nodes) > 2:
+        return "/".join(nodes[:len(nodes) - 2])
+
+def get_omniprobe_home():
+    tmp = os.path.dirname(__file__)
+    print(tmp)
+    nodes = tmp.split("/")
+    if nodes[len(nodes) - 2] == '.':
+        tmp = "/".join(nodes[len(nodes) - 2])
+    return tmp
+
+config_path = os.path.dirname(__file__) + "/config"
+rocm_path = get_rocm_path()
+
+op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/lib/liblogDuration64.so"}
+
+def setup_env():
+    global op_run_env
+    env = os.environ
+    for key in op_run_env:
+        env[key] = op_run_env[key]
+    return env
 
 
 def load_config_files():
+    global config_path
     global op_run_env
-    files = os.listdir("config")
+    files = os.listdir(config_path)
     for file in files:
-        f = open(f"config/{file}", "r")
+        f = open(f"{config_path}/{file}", "r")
         txt = f.read()
         p = eval(txt)
         print(p)
@@ -35,7 +60,7 @@ def load_config_files():
             keys = p.keys();
             for key in keys:
                 if key in op_run_env:
-                    print(f"Duplicate configuration value for {key} in config/{file}")
+                    print(f"Duplicate configuration value for {key} in {config_path}/config/{file}")
                 else:
                     op_run_env[key] = p[key]
         print(op_run_env)
@@ -228,10 +253,11 @@ def main():
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.")
     load_config_files()
     parms  = parse_args()
+    global op_run_env
     print(parms)
     if len(parms.remaining) != 0:
         print(f"Trying to run {parms.remaining[1:]}")
-        capture_subprocess_output(parms.remaining[1:])
+        capture_subprocess_output(parms.remaining[1:], setup_env())
 
 if __name__ == "__main__":
     main()

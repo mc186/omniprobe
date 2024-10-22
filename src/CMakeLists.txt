@@ -19,7 +19,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 ################################################################################
-
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 set ( TARGET_LIB "${TARGET_NAME}" )
 set ( LIB_SRC
@@ -28,6 +28,7 @@ set ( LIB_SRC
   ${LIB_DIR}/hsa_mem_mgr.cc
   ${LIB_DIR}/comms_mgr.cc
   ${LIB_DIR}/pyHandler.cc
+  ${LIB_DIR}/memory_heatmap.cc
 )
 
 find_package(Python COMPONENTS Development)

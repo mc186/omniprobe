@@ -573,25 +573,29 @@ string hsaInterceptor::packetToText(const packet_t *packet)
 }
 
 
+void test_pointers(char *dst, char *src, arg_descriptor_t desc)
+{
+    std::cerr << "src length for explicit args: " << std::dec << desc.explicit_args_length - sizeof(char *) << std::endl;
+    std::cerr << "Dst offset for hidden args: " << (dst + desc.explicit_args_length) - dst << std::endl;
+    std::cerr << "Src offset for hidden args: " << (src + desc.explicit_args_length - sizeof(void *)) - src << std::endl;
+}
+
+
 void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descriptor_t desc)
 {
     assert(dst);
     assert(src);
     memset(dst, 0, desc.kernarg_length);
-    /* The arg_descriptor is for the instrumented kernel, that means it includes compiler-added dh_comms_descriptor *
-     * as the last parameter. So when copying the original explicit kernel argments, the length is the explicit_argument_length
-     * minus the size of the dh_comms_descriptor *.
-    */
-    memcpy(dst, src, desc.explicit_args_length - sizeof(void *));
-    /* When copying implicit kernel arguments, the destination is immediately after the explicit arguments,
-     * The source location is immediately after the explicit arguments, but since the original kernel
-     * did not have the compiler-added dh_comms_descriptor *, the source location for implicit arguments 
-     * is calculated as being at src + explicit_args_length - size of dh_comms_descriptor pointer.
-     */
-    memcpy((void *)(reinterpret_cast<char *>(dst) + desc.explicit_args_length), 
-           (void *) (reinterpret_cast<char *>(src) + (desc.explicit_args_length - sizeof(void *))), 
-           desc.hidden_args_length);
-    void **comms_loc = (void **)(((char *)dst) + (desc.explicit_args_length  - sizeof(void *)));
+    // The descriptor here is a descriptor of the instrumented kernel, so
+    // the parameter list of the non-instrumented original is always short one void*
+    // relative to the desriptor supplied to this method
+    memcpy(dst, src, (desc.explicit_args_count - 1) * sizeof(uint64_t));
+    void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
+    void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
+    // We want to all of the source kernargs except for it's original explicit arguments
+    size_t hidden_args_size = desc.kernarg_length - ((desc.explicit_args_count - 1) * sizeof(uint64_t));
+    memcpy(hidden_args_dst, hidden_args_src, hidden_args_size);
+    void **comms_loc = &(((void **)dst)[desc.explicit_args_count  - 1]);
     *comms_loc = comms;
 }
 
@@ -643,25 +647,45 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);
                 if (alt_kernel_object)
                 {
-                    cerr << "Using alternative kernel\n";
-                    // Found a kernel object to use as an alternative
-                    dispatch->kernel_object = alt_kernel_object;
                     // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
                     // Has to be at least sizeof(void *) if we picked an instrumented kernel
                     if (run_instrumented_)
                     {
+                        // Found an instrumented  kernel Vobject to use as an alternative
+                        dispatch->kernel_object = alt_kernel_object;
                         assert(size);
-                        if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args))
+                        if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args, run_instrumented_))
                         {
                             void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
+
                             comms = comms_mgr_.checkoutCommsObject(queues_[queue], kernel_objects_[dispatch->kernel_object].name_, dispatch_id);
-                            fixupKernArgs(new_kernargs, dispatch->kernarg_address, comms, args);
+
+                            fixupKernArgs(new_kernargs, packet->kernarg_address, comms->get_dev_rsrc_ptr(), args);
                             dispatch->kernarg_address = new_kernargs;
                             // Store the kernarg address so we can free it up at kernel completion
                             pending_kernargs_[sig] = new_kernargs;
                         }
                     }
+                    else
+                        dispatch->kernel_object = packet->kernel_object; // Restore the original kernel object because we're not rewriting the kernargs
+                    /*else
+                    {
+                        assert(size);
+                        if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args, run_instrumented_))
+                        {
+                            void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
+                            memcpy(new_kernargs, dispatch->kernarg_address, args.kernarg_length);
+
+                            comms = comms_mgr_.checkoutCommsObject(queues_[queue], kernel_objects_[dispatch->kernel_object].name_, dispatch_id);
+
+                            void **comms_loc = &(((void **)new_kernargs)[args.explicit_args_count - 1]);
+                            *comms_loc = comms->get_dev_rsrc_ptr();
+                            
+                            dispatch->kernarg_address = new_kernargs;
+                            pending_kernargs_[sig] = new_kernargs;
+                        }
+                    }*/
                 }
                 else
                     cerr << "No alternative kernel\n";

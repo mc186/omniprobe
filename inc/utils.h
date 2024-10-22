@@ -69,6 +69,7 @@ THE SOFTWARE.
 
 
 #define INSTRUMENTATION_BUFFER void *
+#define OMNIPROBE_PREFIX "__amd_crk_"
 
 
 #define RH_PAGE_SIZE 0x1000
@@ -124,6 +125,7 @@ private:
 
 typedef struct arg_descriptor {
     size_t explicit_args_length;
+    size_t explicit_args_count;
     size_t hidden_args_length;
     size_t kernarg_length;
 }arg_descriptor_t;
@@ -145,7 +147,7 @@ public:
     bool hasKernels(hsa_agent_t agent);
     uint32_t getArgSize(uint64_t kernel_object);
     bool addFile(const std::string& name, hsa_agent_t agent);
-    bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc);
+    bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented);
 private:
     HsaApiTable *apiTable_;
     std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;

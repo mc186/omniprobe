@@ -70,9 +70,9 @@ std::string getExecutablePath() {
 std::string getInstrumentedName(const std::string& func_decl) {
     std::string result = func_decl;
     size_t pos = result.find_last_of(')');
-    
     if (pos != std::string::npos) {
         result.replace(pos, 1, ", void*)");
+        result.insert(0, OMNIPROBE_PREFIX);
     }
     else
     {
@@ -146,15 +146,19 @@ bool coCache::hasKernels(hsa_agent_t agent)
     
 }
     
-bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc)
+bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented)
 {
     bool bReturn = false;
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = arg_map_.find(agent);
     if (it != arg_map_.end())
     {
-        std::string instName = getInstrumentedName(name);
-        auto dit = it->second.find(getInstrumentedName(name));
+        std::string strName;
+        if (instrumented)
+            strName = getInstrumentedName(name);
+        else
+            strName = name;
+        auto dit = it->second.find(strName);
         if (dit != it->second.end())
         {
             desc = dit->second;
@@ -284,10 +288,11 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
                 arg_descriptor_t desc;
                 if (p_kh->getArgDescriptor(strName, desc))
                 {
+                   std::cerr << "Adding arg descriptor to coCache for " << strName << " of length " << std::dec << strName.size() << std::endl;
                    lock_guard<std::mutex> lock(mutex_);
                    auto itMap = arg_map_.find(agent);
                    if (itMap != arg_map_.end())
-                       itMap->second[name] = desc;
+                       itMap->second[strName] = desc;
                    else
                         arg_map_[agent] = {{strName, desc}};
                 }
@@ -395,6 +400,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
     const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
     const char* logDurInstrumented = std::getenv("LOGDUR_INSTRUMENTED");
+    const char* logDurAnalyzer = std::getenv("LOGDUR_ANALYZER");
 
     // If the environment variables are set, add them to the map
     if (logDurLogLocation) {
@@ -416,6 +422,14 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
         config["LOGDUR_INSTRUMENTED"] = tmp;
     }else {
         config["LOGDUR_INSTRUMENTED"] = "false";
+    }
+
+    if (logDurAnalyzer) {
+        config["LOGDUR_ANALYZER"] = std::string(logDurAnalyzer);
+    }
+    else
+    {
+        config["LOGDUR_ANALYZER"] = "";
     }
 
     return config.size();
@@ -816,7 +830,7 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
             CHECK_COMGR(amd_comgr_metadata_lookup(value,".symbol", &field));
             std::string strName = get_metadata_string(field);
             strName = demangleName(strName.c_str());
-            arg_descriptor_t desc = {0,0,0};
+            arg_descriptor_t desc = {0,0,0,0};
             amd_comgr_metadata_node_t args;
             CHECK_COMGR(amd_comgr_metadata_lookup(value, ".args", &args));
             CHECK_COMGR(amd_comgr_get_metadata_kind(args, &kind));
@@ -843,7 +857,10 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                         if (parm_name.rfind("hidden_",0) == 0)
                             desc.hidden_args_length += arg_size;
                         else
+                        {
+                            desc.explicit_args_count++;
                             desc.explicit_args_length += arg_size;
+                        }
                     }
                 }
             }
