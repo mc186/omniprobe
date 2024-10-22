@@ -22,6 +22,7 @@ THE SOFTWARE.
 #include "inc/comms_mgr.h"
 #include "inc/hsa_mem_mgr.h"
 #include "inc/memory_heatmap.h"
+#include "inc/time_interval_handler.h"
 
 comms_mgr::comms_mgr(HsaApiTable *pTable) : kern_arg_allocator_(pTable, std::cerr), pTable_(pTable)
 {
@@ -46,6 +47,7 @@ dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, std::stri
         mem_mgr = it->second;
         dh_comms::dh_comms *obj = new dh_comms::dh_comms(DH_SUB_BUFFER_COUNT, DH_SUB_BUFFER_CAPACITY, false, false, mem_mgr);
         obj->append_handler(std::make_unique<memory_heatmap_t>(strKernelName, dispatch_id));
+        obj->append_handler(std::make_unique<time_interval_handler_t>(strKernelName, dispatch_id));
         //obj->append_handler(std::make_unique<default_message_handler>(strKernelName, dispatch_id));
         obj->start();
         return obj;

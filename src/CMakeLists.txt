@@ -29,6 +29,7 @@ set ( LIB_SRC
   ${LIB_DIR}/comms_mgr.cc
   ${LIB_DIR}/pyHandler.cc
   ${LIB_DIR}/memory_heatmap.cc
+  ${LIB_DIR}/time_interval_handler.cc
 )
 
 find_package(Python COMPONENTS Development)
