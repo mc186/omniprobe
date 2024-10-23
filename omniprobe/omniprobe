@@ -76,7 +76,7 @@ def setup_env(parms):
     env = os.environ
     if len(parms.log_location):
         if parms.log_location != "console":
-            if os.path.exists(parms.log_location) and not os.path.isdir(parms.log_location):
+            if not os.path.isdir(parms.log_location):
                 env['LOGDUR_LOG_LOCATION'] = parms.log_location
             else:
                 print(f"WARNING: log location {parms.log_location} either doesn't exist or it is a directory. Will log to the console.")
@@ -84,7 +84,6 @@ def setup_env(parms):
     else:
         env['LOGDUR_LOG_LOCATION'] = "console"
     if len(parms.cache_location):
-        print("Cache location: " + parms.cache_location)
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
         else:
@@ -93,12 +92,10 @@ def setup_env(parms):
         env['LOGDUR_INSTRUMENTED'] = "true"
         if validate_triton_config():
             for key in triton_config:
-                print(key)
                 env[key] = triton_config[key]
         else:
             sys.exit(1)
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
-    print(f"LOGDUR_INSTRUMENTED: {env['LOGDUR_INSTRUMENTED']}")
     #print(env)
     return env
 

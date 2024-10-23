@@ -695,7 +695,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         //replace any pre-existing completion_signal in the dispatch. FWIW, normal HIP/ROCm codes don't use dispatch packet
         //completion signals. The typically enqueue a barrier packet immediately following a kernel dispatch packet.
         dispatch->completion_signal = sig;
-        dispatch_count_++;
 
     }
     return dispatch;
