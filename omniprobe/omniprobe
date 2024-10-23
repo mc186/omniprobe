@@ -9,6 +9,7 @@ import shutil
 import glob
 import subprocess
 import logging
+from pathlib import Path
 
 #LOGDUR_INSTRUMENTED
 #LOGDUR_KERNEL_CACHE
@@ -19,6 +20,10 @@ import logging
 #TRITON_DISABLE_LINE_INFO=0
 #AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE=[some .bc file used by llvm plugin]
 #LLVM_PASS_PLUGIN=[location of plugin.so]
+
+
+def get_default_cache_location():
+    return str(Path.home()) + "/.triton/cache"
 
 def get_rocm_path():
     tmp = shutil.which("rocminfo")
@@ -33,10 +38,38 @@ def get_omniprobe_home():
         tmp = "/".join(nodes[len(nodes) - 2])
     return tmp
 
+triton_config = {"TRITON_LOGGER_LEVEL": "3", 
+                 "TRITON_ALWAYS_COMPILE": "1", 
+                 "TRITON_DISABLE_LINE_INFO": 0,
+                 "TRITON_HIP_LLD_PATH": f"{get_rocm_path()}/llvm/bin/ld.lld",
+                 "AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE": f"{get_omniprobe_home()}/triton/MemTraceInstrumentationKernel-hip-amdgcn-amd-amdhsa-gfx90a.bc",
+                 "LLVM_PASS_PLUGIN": f"{get_omniprobe_home()}/triton/libAMDGCNMemTrace.so"
+                 }
 config_path = os.path.dirname(__file__) + "/config"
 rocm_path = get_rocm_path()
 
 op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/lib/liblogDuration64.so"}
+
+def validate_triton_config():
+    global triton_config
+    if 'TRITON_HIP_LLD_PATH' not in triton_config or 'AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE' not in triton_config or 'LLVM_PASS_PLUGIN' not in triton_config:
+        print("You are missing some required configuration parameters in your triton environment. You need to specify all of the following environment variables:")
+        print(f"\tTRITON_HIP_LLD_PATH (usually located whereever rocm is installed (e.g. {get_rocm_path()}/llvm/bin/ld.lld)")
+        print(f"\tAMDGCN_INSTRUMENTATION_FUNCTIONS_FILE (should be located in {get_omniprobe_home()}/triton.")
+        print(f"\tLLVM_PASS_PLUGIN (should be located {get_omniprobe_home()}/triton.")
+        return False
+    else:
+        if not os.path.exists(triton_config['TRITON_HIP_LLD_PATH']):
+            print(f"The file pointed to by TRITON_HIP_LLD_PATH ({triton_config['TRITON_HIP_LLD_PATH']}) is missing")
+            return False
+        if not os.path.exists(triton_config['AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE']):
+            print(f"The file pointed to by AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE ({triton_config['AMDGCN_INSTRUMENTATION_FUNCTIONS_FILE']}) is missing")
+            print(f"\tIt should be in {get_omniprobe_home()}/triton")
+            return False
+        if not os.path.exists(triton_config['LLVM_PASS_PLUGIN']):
+            print(f"The file pointed to by LLVM_PASS_PLUGIN ({triton_config['LLVM_PASS_PLUGIN']}) is missing")
+            return False
+    return True
 
 def setup_env(parms):
     global op_run_env
@@ -54,8 +87,15 @@ def setup_env(parms):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
         else:
             print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
+    else:
+        env['LOGDUR_KERNEL_CACHE'] = get_default_cache_location()
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
+        if validate_triton_config():
+            for key in triton_config:
+                env[key] = triton_config[key]
+        else:
+            sys.exit(1)
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
     #print(env)
     return env

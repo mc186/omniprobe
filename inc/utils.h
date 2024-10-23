@@ -148,8 +148,10 @@ public:
     uint32_t getArgSize(uint64_t kernel_object);
     bool addFile(const std::string& name, hsa_agent_t agent);
     bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented);
+    uint8_t getArgumentAlignment(uint64_t kernel_object);
 private:
     HsaApiTable *apiTable_;
+    hsa_ven_amd_loader_1_00_pfn_t loader_api_;
     std::map<hsa_agent_t, std::vector<hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> kernels_;
     std::vector<std::string> filelist_;
     std::map<hsa_agent_t, std::map<std::string, hsa_executable_symbol_t>, hsa_cmp<hsa_agent_t>> lookup_map_;

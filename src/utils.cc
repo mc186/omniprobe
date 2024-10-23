@@ -128,6 +128,8 @@ void signalPool::checkin(hsa_signal_t sig)
 coCache::coCache(HsaApiTable *apiTable) 
 {
     apiTable_ = apiTable;
+    auto status = apiTable_->core_->hsa_system_get_major_extension_table_fn(HSA_EXTENSION_AMD_LOADER, 1, sizeof(loader_api_), &loader_api_);
+    CHECK_STATUS("Unable to find HSA extension table", status);
 }
 
 coCache::~coCache()
@@ -137,6 +139,18 @@ coCache::~coCache()
     {
         CHECK_STATUS("Unable to destroy loaded code objects", apiTable_->core_->hsa_executable_destroy_fn(it.second.executable_));
     }
+}
+
+uint8_t coCache::getArgumentAlignment(uint64_t kernel_object)
+{
+      const amd_kernel_code_t* kernel_code = NULL;
+      hsa_status_t status = loader_api_.hsa_ven_amd_loader_query_host_address(
+              reinterpret_cast<const void*>(kernel_object),
+              reinterpret_cast<const void**>(&kernel_code));
+      if (HSA_STATUS_SUCCESS != status) {
+        kernel_code = reinterpret_cast<amd_kernel_code_t*>(kernel_object);
+      }
+      return kernel_code->kernarg_segment_alignment;
 }
 
 bool coCache::hasKernels(hsa_agent_t agent)
