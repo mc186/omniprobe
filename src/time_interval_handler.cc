@@ -1,4 +1,5 @@
 #include "inc/time_interval_handler.h"
+#include <iostream>
 #include <cassert>
 
 
@@ -48,7 +49,8 @@ void time_interval_handler_t::report()
     if (no_intervals_ != 0)
     {
         double average_time = (double)total_time_ / no_intervals_;
-        printf("omniprobe time_interval report:\n");
+        std::cerr << "omniprobe time_interval report for kernel " << strKernel_ << " dispatch[" << std::dec << dispatch_id_ << "]\n";
+//        printf("time_interval report\n");
         printf("\ttotal time for all %zu intervals: %lu\n", no_intervals_, total_time_);
         printf("\taverage time per interval: %.0f\n", average_time);
         printf("\tfirst start: %lu\n", first_start_);

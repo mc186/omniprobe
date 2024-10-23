@@ -44,7 +44,9 @@ void memory_heatmap_t::report()
 {
     if (page_counts_.size() != 0)
     {
-        printf("omniprobe memory heatmap report:\n\tpage size = %lu\n", page_size_);
+        std::cerr << "omniprobe memory heatmap report for kernel " << strKernel_ << " dispatch[" << std::dec << dispatch_id_ << "] ";
+        std::cerr << "page size = " << page_size_ << std::endl;
+    //    printf("omniprobe memory heatmap report:\n\tpage size = %lu\n", page_size_);
     }
     for (const auto &[first_page_address, count] : page_counts_)
     {

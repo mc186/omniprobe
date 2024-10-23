@@ -24,7 +24,7 @@ private:
     uint64_t total_time_;
     size_t no_intervals_;
     bool verbose_;
-    std::string& strKernel_;
+    std::string strKernel_;
     uint64_t dispatch_id_;
 
 };
