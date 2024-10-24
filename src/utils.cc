@@ -313,8 +313,9 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
                     }
                     catch(const std::regex_error& error)
                     {
-                        std::cerr << "ERROR: There is a problem with your kernel filter (\"" << strFilter << "\"):\n\t" << error.what() << std::endl;
-                        exit(1);
+                        std::cout << "ERROR: There is a problem with your kernel filter (\"" << strFilter << "\"):\n";
+                        std::cout << "\t" << error.what() << std::endl;
+                        abort();
                     }
                 }
                 arg_descriptor_t desc;
