@@ -83,11 +83,13 @@ def setup_env(parms):
                 parms.log_location = "console"
     else:
         env['LOGDUR_LOG_LOCATION'] = "console"
+    
     if len(parms.cache_location):
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
         else:
             print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
+    
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
         if validate_triton_config():
@@ -95,6 +97,13 @@ def setup_env(parms):
                 env[key] = triton_config[key]
         else:
             sys.exit(1)
+
+    if len(parms.kernels):
+        if parms.instrumented == False:
+            print("--kernels parameter is only used when running instrumented kernels. It will be ignored.")
+        else:
+            env['LOGDUR_FILTER'] = parms.kernels
+
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
     #print(env)
     return env
@@ -138,9 +147,10 @@ def console_debug(*argv):
 def console_warning(*argv):
     if len(argv) > 1:
         for msg in argv:
-            logging.info(f"[{msg}]")
+            if len(msg) > 0:
+                logging.info(f"[{msg}]")
         logging.warning(f"[{argv[0]}] {argv[1]}")
-    else:
+    elif len(argv[0]) > 0:
         logging.warning(f"{argv[0]}")
 
 

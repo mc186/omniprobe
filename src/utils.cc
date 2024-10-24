@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 #include "inc/utils.h"
 #include <algorithm>
+#include <regex>
 
 
 using namespace std;
@@ -182,7 +183,7 @@ bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descrip
     return bReturn;
 }
 
-bool coCache::addFile(const std::string& name, hsa_agent_t agent)
+bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter)
 {
     bool bResult = false;
     // Build the code object filename
@@ -299,6 +300,23 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
                 std::string mangledName(name);
 
                 string strName = demangleName(name);
+                // If a kernel filter was supplied, match the demangled name to the filter. If there's no match, 
+                // skip this symbol because we don't want to run instrumented for kernels whose names don't
+                // match on the filter
+                if (strFilter.size())
+                {
+                    try
+                    {
+                        std::regex filter_regex(strFilter, std::regex_constants::ECMAScript);
+                        if (!std::regex_search(strName, filter_regex))
+                            continue;
+                    }
+                    catch(const std::regex_error& error)
+                    {
+                        std::cerr << "ERROR: There is a problem with your kernel filter (\"" << strFilter << "\"):\n\t" << error.what() << std::endl;
+                        exit(1);
+                    }
+                }
                 arg_descriptor_t desc;
                 if (p_kh->getArgDescriptor(strName, desc))
                 {
@@ -333,7 +351,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent)
     return bResult;
 }
     
-bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented)
+bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, const std::string& strFilter, bool instrumented)
 {
     filelist_.clear();
     if (directory.length())
@@ -350,7 +368,7 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, bool 
 
                 for (auto file : filelist_)
                 {
-                    addFile(file, agent);
+                    addFile(file, agent, strFilter);
                 }
             } catch (const fs::filesystem_error& e) {
                 std::cerr << "Filesystem error: " << e.what() << std::endl;
@@ -415,36 +433,33 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
     const char* logDurInstrumented = std::getenv("LOGDUR_INSTRUMENTED");
     const char* logDurAnalyzer = std::getenv("LOGDUR_ANALYZER");
+    const char* logDurKernelFilter = std::getenv("LOGDUR_FILTER");
+    const char* logDurDispatches = std::getenv("LOGDUR_DISPATCHES");
 
-    // If the environment variables are set, add them to the map
-    if (logDurLogLocation) {
-        config["LOGDUR_LOG_LOCATION"] = std::string(logDurLogLocation);
-    } else {
-        config["LOGDUR_LOG_LOCATION"] = "console";  // Default or empty value if not set
-    }
+    config["LOGDUR_LOG_LOCATION"] = logDurLogLocation ? logDurLogLocation : "console";
 
-    if (logDurKernelCache) {
-        config["LOGDUR_KERNEL_CACHE"] = std::string(logDurKernelCache);
-    } else {
-        config["LOGDUR_KERNEL_CACHE"] = "";  // Default or empty value if not set
-    }
+    config["LOGDUR_KERNEL_CACHE"] = logDurKernelCache ? logDurKernelCache : "";
 
     if (logDurInstrumented) {
         std::string tmp = logDurInstrumented;
         std::transform(tmp.begin(), tmp.end(), tmp.begin(),
             [](unsigned char c){ return std::tolower(c); });
-        config["LOGDUR_INSTRUMENTED"] = tmp;
+        if (tmp != "true" && tmp != "false")
+        {
+            std::cerr << "Invalid value for LOGDUR_INSTRUMENTED. Must be either \"true\" or \"false\". Running non-instrumented kernels." << std::endl;
+            config["LOGDUR_INSTRUMENTED"] = "false";
+        }
+        else
+            config["LOGDUR_INSTRUMENTED"] = tmp;
     }else {
         config["LOGDUR_INSTRUMENTED"] = "false";
     }
 
-    if (logDurAnalyzer) {
-        config["LOGDUR_ANALYZER"] = std::string(logDurAnalyzer);
-    }
-    else
-    {
-        config["LOGDUR_ANALYZER"] = "";
-    }
+    config["LOGDUR_ANALYZER"] = logDurAnalyzer ? logDurAnalyzer : "";
+
+    config["LOGDUR_FILTER"] = logDurKernelFilter ? logDurKernelFilter : "";
+
+    config["LOGDUR_DISPATHCES"] = logDurDispatches ? logDurDispatches : "";
 
     return config.size();
 }

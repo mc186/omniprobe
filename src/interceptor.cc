@@ -172,12 +172,13 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                 }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
             {
                 std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
+                std::string strFilter = config_["LOGDUR_FILTER"];
                 for (auto agent : gpus)
                 {
                     /* If we're running Triton, the user needs to specify the location of the Triton
                      * code object cache directory - usually in $HOME/.triton/cache */
                     if (cacheLocation.length())
-                        kernel_cache_.setLocation(agent, cacheLocation);
+                        kernel_cache_.setLocation(agent, cacheLocation, config_["LOGDUR_FILTER"]);
                     else
                     {
                         /* If a KERNEL_CACHE directory is not supplied, we look for all the kernels in fat binaries
@@ -190,7 +191,7 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                             //std::cerr << "File with a possible .fatbin section: " << file << std::endl;
                             try
                             {
-                                kernel_cache_.addFile(file, agent);
+                                kernel_cache_.addFile(file, agent, strFilter);
                             }
                             catch (const std::runtime_error e)
                             {
@@ -253,7 +254,7 @@ bool hsaInterceptor::addCodeObject(const std::string& name)
         {
             for (auto agent : gpus)
             {
-                kernel_cache_.addFile(name, agent);
+                kernel_cache_.addFile(name, agent, config_["LOGDUR_FILTER"]);
             }
         }
     }

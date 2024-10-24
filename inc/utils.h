@@ -141,12 +141,12 @@ class coCache{
 public:
     coCache(HsaApiTable *apiTable);
     ~coCache();
-    bool setLocation(hsa_agent_t agent, const std::string& directory, bool instrumented = true);
+    bool setLocation(hsa_agent_t agent, const std::string& directory, const std::string& strFilter, bool instrumented = true);
     uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
     uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
     bool hasKernels(hsa_agent_t agent);
     uint32_t getArgSize(uint64_t kernel_object);
-    bool addFile(const std::string& name, hsa_agent_t agent);
+    bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);
     bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented);
     uint8_t getArgumentAlignment(uint64_t kernel_object);
 private:
