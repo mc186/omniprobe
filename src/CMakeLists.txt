@@ -53,6 +53,9 @@ endfunction()
 
 set(DH_COMMS_SEARCH_DIRS
     ${CMAKE_INCLUDE_PATH}
+    "$ENV{HOME}/.local/include/dh_comms"
+    /usr/local/include/dh_comms
+    /usr/include/dh_comms
     )
 
 find_file_directory("dh_comms.h" "${DH_COMMS_SEARCH_DIRS}"  DH_COMMS_INCLUDE)
@@ -64,7 +67,7 @@ else()
     message(WARNING "This project has a dependency on the dh_comms library which can be found here: https://github.com/AARInternal/dh_comms.git")
 endif()
 
-find_library(DH_COMMS_LIB NAMES dh_ omms libdh_comms.so)
+find_library(DH_COMMS_LIB NAMES dh_comms libdh_comms.so PATHS $ENV{HOME}/.local/lib)
 
 if(DH_COMMS_LIB)
     message(STATUS "Found dh_comms library: ${DH_COMMS_LIB}")

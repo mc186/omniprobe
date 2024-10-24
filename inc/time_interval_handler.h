@@ -13,7 +13,7 @@ class time_interval_handler_t : public dh_comms::message_handler_base
 public:
     time_interval_handler_t(std::string& strKernel, uint64_t dispatch_id, bool verbose = false);
     time_interval_handler_t(const time_interval_handler_t &) = default;
-    virtual ~time_interval_handler_t() = default;
+    virtual ~time_interval_handler_t();
     virtual bool handle(const dh_comms::message_t &message) override;
     virtual void report() override;
     virtual void clear() override;

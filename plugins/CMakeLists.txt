@@ -1,0 +1,59 @@
+################################################################################
+# Copyright (c) 2018 Advanced Micro Devices, Inc. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+################################################################################
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+
+set ( PLUGIN_LIB "${DEFAULT_PLUGIN_NAME}" )
+set ( DEFAULT_PLUGIN_SRC
+  ${LIB_DIR}/memory_heatmap.cc
+  ${LIB_DIR}/time_interval_handler.cc
+  ${PLUGIN_DIR}/plugin.cc
+)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64)
+add_library ( ${DEFAULT_PLUGIN_NAME} SHARED ${DEFAULT_PLUGIN_SRC})
+
+target_include_directories (
+    ${DEFAULT_PLUGIN_NAME}
+  PRIVATE
+    ${LIB_DIR}
+    ${ROCM_ROOT_DIR}/include
+    ${ROOT_DIR}
+    ${HSA_RUNTIME_INC_PATH}
+    ${HSA_KMT_LIB_PATH}/..
+    ${DH_COMMS_INCLUDE}
+    ${Python_INCLUDE_DIRS}
+)
+
+target_link_libraries(
+    ${DEFAULT_PLUGIN_NAME}
+  PRIVATE
+    ${HSA_RUNTIME_LIB}
+    c
+    stdc++
+    stdc++fs
+    ${DH_COMMS_LIB}
+)
+
+
+

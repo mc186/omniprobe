@@ -14,6 +14,10 @@ memory_heatmap_t::memory_heatmap_t(std::string& strKernel, uint64_t dispatch_id,
 {
 }
 
+memory_heatmap_t::~memory_heatmap_t()
+{
+}
+
 bool memory_heatmap_t::handle(const dh_comms::message_t &message)
 {
     if ((dh_comms::message_type)message.wave_header().user_type != dh_comms::message_type::address)

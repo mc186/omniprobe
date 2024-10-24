@@ -114,8 +114,11 @@ message("-- LIB-VERSION STRING: ${LIB_VERSION_STRING}")
 
 # Set target and root/lib/test directory
 set(TARGET_NAME "${INTERCEPTOR_TARGET}")
+set(DEFAULT_PLUGIN_NAME "defaultMessageHandlers64")
+set(DEFAULT_PLUGIN_LIB "lib${DEFAULT_PLUGIN_NAME}")
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIB_DIR "${ROOT_DIR}/src")
+set(PLUGIN_DIR "${ROOT_DIR}/plugins")
 
 # Enable tracing API
 if (NOT USE_PROF_API)
@@ -124,6 +127,7 @@ endif()
 
 # Build libraries
 include(${LIB_DIR}/CMakeLists.txt)
+include(${PLUGIN_DIR}/CMakeLists.txt)
 
 # Set the VERSION and SOVERSION values
 set_property(TARGET ${TARGET_NAME} PROPERTY VERSION "${LIB_VERSION_STRING}")

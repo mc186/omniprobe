@@ -14,6 +14,10 @@ time_interval_handler_t::time_interval_handler_t(std::string& strKernel, uint64_
 {
 }
 
+time_interval_handler_t::~time_interval_handler_t()
+{
+}
+
 bool time_interval_handler_t::handle(const dh_comms::message_t &message)
 {
     if ((dh_comms::message_type)message.wave_header().user_type != dh_comms::message_type::time_interval)
