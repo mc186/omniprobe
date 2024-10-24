@@ -235,7 +235,7 @@ def add_general_group(parser):
         dest="kernels",
         required=False,
         default="",
-        help="\tKernel filters to define which kernels are instrumented"
+        help="\tKernel filters to define which kernels are instrumented. Valid ECMAScript regular expressions are supported. (cf. https://cplusplus.com/reference/regex/ECMAScript/)"
     )
     general_group.add_argument (
         "-i",
