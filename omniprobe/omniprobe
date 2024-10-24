@@ -214,6 +214,7 @@ def add_general_group(parser):
         default=False,
         help="\tVerbose output"
     )
+    '''
     general_group.add_argument (
         "-t",
         "--type",
@@ -224,6 +225,7 @@ def add_general_group(parser):
         default="memorytrace",
         help="\tSpecify the type of instrumentation to run"
     )
+    '''
     
     general_group.add_argument (
         "-k",
@@ -255,7 +257,7 @@ def add_general_group(parser):
         dest="dispatches",
         required=False,
         default="all",
-        help="\tThe dispatches for which to capture output.  Valid options [all, random, 1]"
+        help="\tThe dispatches for which to capture instrumentation output. This only applies when running with --instrumented.  Valid options: [all, random, 1]"
     )
     
     general_group.add_argument (
@@ -287,7 +289,7 @@ def add_general_group(parser):
         metavar="",
         dest="handler",
         required=False,
-        default="",
+        default="default",
         help="\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module"
     )
     
@@ -320,8 +322,8 @@ def parse_args():
 
     
 def main():
-    print("omniprobe is a work of AMD Research and Advanced Development")
-    print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.")
+    print("\nOmniprobe is developed by Advanced Micro Devices, Research and Advanced Development")
+    print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
     load_config_files()
     parms  = parse_args()
     global op_run_env
