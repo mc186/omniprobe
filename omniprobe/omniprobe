@@ -120,7 +120,10 @@ def setup_env(parms):
     env['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
     env_dump['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
     if parms.dump_env == True:
-        print(env_dump)
+        dump_string = ""
+        for key in env_dump:
+            dump_string += f"{key}={env_dump[key]} "
+        print(dump_string)
     return env
 
 
