@@ -72,29 +72,37 @@ def validate_triton_config():
     return True
 
 def setup_env(parms):
+    env_dump = {}
     global op_run_env
     env = os.environ
     if len(parms.log_location):
         if parms.log_location != "console":
             if not os.path.isdir(parms.log_location):
                 env['LOGDUR_LOG_LOCATION'] = parms.log_location
+                env_dump['LOGDUR_LOG_LOCATION'] = parms.log_location
+
             else:
                 print(f"WARNING: log location {parms.log_location} either doesn't exist or it is a directory. Will log to the console.")
                 parms.log_location = "console"
     else:
         env['LOGDUR_LOG_LOCATION'] = "console"
+        env_dump['LOGDUR_LOG_LOCATION'] = "console"
+
     
     if len(parms.cache_location):
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+            env_dump['LOGDUR_KERNEL_CACHE'] = parms.cache_location
         else:
             print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
     
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
+        env_dump['LOGDUR_INSTRUMENTED'] = "true"
         if validate_triton_config():
             for key in triton_config:
                 env[key] = triton_config[key]
+                env_dump[key] = triton_config[key]
         else:
             sys.exit(1)
 
@@ -103,11 +111,16 @@ def setup_env(parms):
             print("--kernels parameter is only used when running instrumented kernels. It will be ignored.")
         else:
             env['LOGDUR_FILTER'] = parms.kernels
+            env_dump['LOGDUR_FILTER'] = parms.kernels
 
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
+    env_dump['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
     env['LOGDUR_HANDLERS'] = ','.join(parms.handlers)
+    env_dump['LOGDUR_HANDLERS'] = ','.join(parms.handlers)
     env['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
-    #print(env)
+    env_dump['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
+    if parms.dump_env == True:
+        print(env_dump)
     return env
 
 
@@ -252,6 +265,19 @@ def add_general_group(parser):
     )
     
     general_group.add_argument (
+        "-e",
+        "--env-deump",
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        metavar="",
+        dest="dump_env",
+        required=False,
+        default=False,
+        help="\tDump all the environment variables for running liblogDuration64.so direction."
+    )
+    
+    
+    general_group.add_argument (
         "-d",
         "--dispatches",
         type=str,
@@ -329,9 +355,11 @@ def main():
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
     load_config_files()
     parms  = parse_args()
-    if len(parms.remaining) != 0:
+    if len(parms.remaining) != 0 and not parms.dump_env == True:
         print(f"Trying to run {parms.remaining[1:]}")
         capture_subprocess_output(parms.remaining[1:], setup_env(parms))
+    elif parms.dump_env == True:
+        setup_env(parms)
         
 
 if __name__ == "__main__":
