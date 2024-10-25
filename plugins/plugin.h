@@ -6,6 +6,8 @@
 #define DESTRUCTOR_API __attribute__((destructor))
 extern "C"{
 
-    PUBLIC_API void getMessageHandlers(const std::string& kernel, uint64_t dispatch_id, std::vector<std::unique_ptr<dh_comms::message_handler_base>&&>& outHandlers);
+    PUBLIC_API void getMessageHandlers(const std::string& kernel, uint64_t dispatch_id, std::vector<dh_comms::message_handler_base*>& outHandlers);
 
 }
+
+typedef void (*getMessageHandlers_t)(const std::string& kernel, uint64_t dispatch_id, std::vector<dh_comms::message_handler_base *>& outHandlers);

@@ -37,6 +37,20 @@ comms_mgr::~comms_mgr()
     mem_mgrs_.clear();
 }
 
+
+void comms_mgr::setConfig(const std::map<std::string, std::string>& config)
+{
+    auto it = config.find("LOGDUR_HANDLERS");
+    if (it != config.end() && it->second.size())
+    {
+        std::vector<string> libs;
+        split(it->second, libs, ",", false);
+        for (auto h : libs)
+            std::cerr << "HANDLER: " << h << std::endl;
+        handler_mgr_.setHandlers(libs) ;
+    }
+}
+
 dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -46,9 +60,21 @@ dh_comms::dh_comms * comms_mgr::checkoutCommsObject(hsa_agent_t agent, std::stri
     {
         mem_mgr = it->second;
         dh_comms::dh_comms *obj = new dh_comms::dh_comms(DH_SUB_BUFFER_COUNT, DH_SUB_BUFFER_CAPACITY, false, false, mem_mgr);
-        obj->append_handler(std::make_unique<memory_heatmap_t>(strKernelName, dispatch_id));
-        obj->append_handler(std::make_unique<time_interval_handler_t>(strKernelName, dispatch_id));
-        //obj->append_handler(std::make_unique<default_message_handler>(strKernelName, dispatch_id));
+        std::vector<dh_comms::message_handler_base *> handlers;
+        handler_mgr_.getMessageHandlers(strKernelName, dispatch_id, handlers);
+        if (handlers.size())
+        {
+            for(auto it : handlers)
+            {
+                auto tmp = std::unique_ptr<dh_comms::message_handler_base>(it);
+                obj->append_handler(std::move(tmp));
+            }
+        }
+        else
+        {
+            obj->append_handler(std::make_unique<memory_heatmap_t>(strKernelName, dispatch_id));
+            obj->append_handler(std::make_unique<time_interval_handler_t>(strKernelName, dispatch_id));
+        }
         obj->start();
         return obj;
 

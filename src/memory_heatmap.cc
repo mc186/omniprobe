@@ -6,7 +6,7 @@
 #include "data_headers.h"
 #include "message.h"
 
-memory_heatmap_t::memory_heatmap_t(std::string& strKernel, uint64_t dispatch_id, size_t page_size, bool verbose)
+memory_heatmap_t::memory_heatmap_t(const std::string& strKernel, uint64_t dispatch_id, size_t page_size, bool verbose)
     : strKernel_(strKernel),
       dispatch_id_(dispatch_id),
       verbose_(verbose),

@@ -57,6 +57,7 @@ public:
     dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id);
     bool checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object);
     bool addAgent(hsa_agent_t agent);
+    void setConfig(const std::map<std::string, std::string>& config);
 private:
     KernArgAllocator kern_arg_allocator_;
     std::mutex mutex_;
@@ -66,6 +67,7 @@ private:
     std::map<hsa_agent_t, std::vector<dh_comms::dh_comms *>, hsa_cmp<hsa_agent_t>> comms_pool_;
     std::map<hsa_agent_t, std::vector<dh_comms::dh_comms *>, hsa_cmp<hsa_agent_t>> pending_comms_;
     HsaApiTable *pTable_;
+    handlerManager handler_mgr_;
 };
 
 

@@ -433,7 +433,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
     const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
     const char* logDurKernelCache = std::getenv("LOGDUR_KERNEL_CACHE");
     const char* logDurInstrumented = std::getenv("LOGDUR_INSTRUMENTED");
-    const char* logDurAnalyzer = std::getenv("LOGDUR_ANALYZER");
+    const char* logDurHandlers = std::getenv("LOGDUR_HANDLERS");
     const char* logDurKernelFilter = std::getenv("LOGDUR_FILTER");
     const char* logDurDispatches = std::getenv("LOGDUR_DISPATCHES");
 
@@ -456,7 +456,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
         config["LOGDUR_INSTRUMENTED"] = "false";
     }
 
-    config["LOGDUR_ANALYZER"] = logDurAnalyzer ? logDurAnalyzer : "";
+    config["LOGDUR_HANDLERS"] = logDurHandlers ? logDurHandlers : "";
 
     config["LOGDUR_FILTER"] = logDurKernelFilter ? logDurKernelFilter : "";
 
@@ -920,5 +920,49 @@ bool KernelArgHelper::getArgDescriptor(const std::string& strName, arg_descripto
     return bSuccess;
 }
 
+
+handlerManager::handlerManager()
+{
+}
+
+handlerManager::handlerManager(const std::vector<std::string>& handlers)
+{
+    setHandlers(handlers);
+}
+
+handlerManager::~handlerManager()
+{
+    auto it = plugins_.begin();
+    while(it != plugins_.end())
+    {
+        dlclose(it->first);
+        it++;
+    }
+}
+
+void handlerManager::getMessageHandlers(const std::string& strKernel, uint64_t dispatch_id,std::vector<dh_comms::message_handler_base *>& outHandlers)
+{
+    for(auto it : plugins_)
+        it.second(strKernel, dispatch_id, outHandlers);
+}
+
+bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
+{
+    for (auto lib : handlers)
+    {
+        void *handle = dlopen(lib.c_str(),RTLD_NOW);
+        if (!handle)
+            std::cerr << "ERROR: " << errno << std::endl;
+        else
+        {
+            getMessageHandlers_t func = reinterpret_cast<getMessageHandlers_t>(dlsym(handle, "getMessageHandlers"));
+            if (func)
+            {
+                plugins_[handle] = func;
+            } 
+        }
+    }
+    return true;
+}
 
 

@@ -105,6 +105,8 @@ def setup_env(parms):
             env['LOGDUR_FILTER'] = parms.kernels
 
     env['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
+    env['LOGDUR_HANDLERS'] = ','.join(parms.handlers)
+    env['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
     #print(env)
     return env
 
@@ -284,12 +286,13 @@ def add_general_group(parser):
     
     general_group.add_argument (
         "-a",
-        "--analyzer",
+        "--analyzers",
         type=str,
         metavar="",
-        dest="handler",
+        dest="handlers",
         required=False,
-        default="default",
+        nargs='+',
+        default=["libdefaultMessageHandlers64.so"],
         help="\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module"
     )
     
@@ -326,7 +329,6 @@ def main():
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
     load_config_files()
     parms  = parse_args()
-    global op_run_env
     if len(parms.remaining) != 0:
         print(f"Trying to run {parms.remaining[1:]}")
         capture_subprocess_output(parms.remaining[1:], setup_env(parms))

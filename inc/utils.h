@@ -34,6 +34,7 @@ THE SOFTWARE.
 #include <sys/mman.h>
 #include <unistd.h>
 #include <limits.h>
+#include <dlfcn.h>
 
 #include <atomic>
 #include <chrono>
@@ -66,6 +67,7 @@ THE SOFTWARE.
 #include "rocprofiler/rocprofiler.h"
 #define AMD_INTERNAL_BUILD
 #include <hsa_api_trace.h>
+#include "plugins/plugin.h"
 
 
 #define INSTRUMENTATION_BUFFER void *
@@ -191,6 +193,17 @@ private:
     std::string location_;
 };
 
+class handlerManager{
+public:
+    handlerManager();
+    handlerManager(const std::vector<std::string>& handlers);
+    ~handlerManager();
+    void getMessageHandlers(const std::string& strKernel, uint64_t dispatch_id, std::vector<dh_comms::message_handler_base *>& outHandlers); 
+    bool setHandlers(const std::vector<std::string>& handlers);
+private:
+    std::map<void *, getMessageHandlers_t> plugins_;
+};
+
 
 std::vector<std::string> getIsaList(hsa_agent_t agent);
 unsigned int getLogDurConfig(std::map<std::string, std::string>& config);
@@ -199,3 +212,61 @@ void clipKernelName(std::string& str);
 bool isFileNewer(const std::chrono::system_clock::time_point& timestamp, const std::string& fileName);
 std::string demangleName(const char *name);
 std::string getExecutablePath();
+
+
+static inline void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s) {
+    ltrim(s);
+    rtrim(s);
+}
+
+static inline size_t split(std::string const& s,
+             std::vector<std::string> &container,
+             const char * delimiter,
+             bool keepBlankFields)
+{
+    size_t n = 0;
+    std::string::const_iterator it = s.begin(), end = s.end(), first;
+    for (first = it; it != end; ++it)
+    {
+        // Examine each character and if it matches the delimiter
+        if (*delimiter == *it)
+        {
+            if (keepBlankFields || first != it)
+            {
+                // extract the current field from the string and
+                // append the current field to the given container
+                container.push_back(std::string(first, it));
+                ++n;
+                
+                // skip the delimiter
+                first = it + 1;
+            }
+            else
+            {
+                ++first;
+            }
+        }
+    }
+    if (keepBlankFields || first != it)
+    {
+        // extract the last field from the string and
+        // append the last field to the given container
+        container.push_back(std::string(first, it));
+        ++n;
+    }
+    return n;
+}

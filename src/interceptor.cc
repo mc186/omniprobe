@@ -146,6 +146,7 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
 {
     apiTable_ = table;
     getLogDurConfig(config_);
+    comms_mgr_.setConfig(config_);
     log_.setLocation(config_["LOGDUR_LOG_LOCATION"]);
     if (config_["LOGDUR_INSTRUMENTED"] == "true")
     {

@@ -3,7 +3,7 @@
 #include <cassert>
 
 
-time_interval_handler_t::time_interval_handler_t(std::string& strKernel, uint64_t dispatch_id, bool verbose)
+time_interval_handler_t::time_interval_handler_t(const std::string& strKernel, uint64_t dispatch_id, bool verbose)
     : first_start_(0xffffffffffffffff),
       last_stop_(0),
       total_time_(0),
