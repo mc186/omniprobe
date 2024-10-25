@@ -292,7 +292,7 @@ def add_general_group(parser):
         dest="handlers",
         required=False,
         nargs='+',
-        default=["libdefaultMessageHandlers64.so"],
+        default=[f"{get_omniprobe_home()}/lib/libdefaultMessageHandlers64.so"],
         help="\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module"
     )
     
