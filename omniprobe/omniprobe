@@ -117,8 +117,8 @@ def setup_env(parms):
     env_dump['HSA_TOOLS_LIB'] = op_run_env['HSA_TOOLS_LIB']
     env['LOGDUR_HANDLERS'] = ','.join(parms.handlers)
     env_dump['LOGDUR_HANDLERS'] = ','.join(parms.handlers)
-    env['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
-    env_dump['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib"])
+    env['LD_LIBRARY_PATH'] = ':'.join([f"{get_omniprobe_home()}/lib",env["LD_LIBRARY_PATH"]])
+    env_dump['LD_LIBRARY_PATH'] = env['LD_LIBRARY_PATH']
     if parms.dump_env == True:
         dump_string = ""
         for key in env_dump:
