@@ -32,6 +32,10 @@ set ( LIB_SRC
   ${LIB_DIR}/time_interval_handler.cc
 )
 
+set (TEST_SRC
+    ${LIB_DIR}/test/stresstest.cc
+)
+
 find_package(Python COMPONENTS Development)
 
 function(find_file_directory FILENAME DIRS OUTPUT_VAR)
@@ -148,5 +152,20 @@ target_link_libraries(
     amd_comgr
 )
 
+add_executable(${STRESSTEST_NAME} ${TEST_SRC})
 
+target_link_libraries(
+    ${STRESSTEST_NAME}
+  PRIVATE
+    ${DH_COMMS_LIB}
+)
+
+target_include_directories (
+    ${STRESSTEST_NAME}
+  PRIVATE
+    ${LIB_DIR}/test
+    ${ROCM_ROOT_DIR}/include
+    ${ROOT_DIR}
+    ${DH_COMMS_INCLUDE}
+)
 

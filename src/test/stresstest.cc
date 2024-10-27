@@ -1,4 +1,8 @@
 #include "hip/hip_runtime.h"
+#include "dh_comms.h"
+#include "dh_comms_dev.h"
+#include "time_interval_handler.h"
+
 // Compile with hipcc -O3 --amdgpu-target=gfx908 -I${ROCM_PATH}/roctracer/include -L${ROCM_PATH}/roctracer/lib -lroctx64 test.cpp
  
 #include <cstdio>
@@ -8,7 +12,7 @@
 //#include <roctx.h>
  
  
-#define N 10  //2560
+#define N 100  //2560
 #define num_iters 1 //KAL 1000
  
  
@@ -16,7 +20,7 @@ template<int n, int m>
 __global__ void kernel(double* x) {
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
     {
-//        #pragma unroll
+        #pragma unroll
         for (int i = 0; i < n; ++i)
         {
             x[idx] += i * m;
@@ -24,6 +28,26 @@ __global__ void kernel(double* x) {
     }
 }
  
+template<int n, int m>
+__global__ void __amd_crk_kernel(double* x, void *ptr) {
+    
+    dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
+
+    dh_comms::time_interval time_interval;
+    time_interval.start = __clock64(); // time in cycles
+    dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
+
+    for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+        #pragma unroll
+        for (int i = 0; i < n; ++i)
+        {
+            dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
+            x[idx] += i * m;
+        }
+    }
+}
+
 void cpuWork() {
     // Do some CPU "work".
     usleep(100);
@@ -37,14 +61,50 @@ inline void hip_assert(hipError_t err, const char *file, int line)
         exit(-1);
     }
 }
- 
+
+void print_help() {
+    std::cout << "Usage: stressttest [-i iterations]\n";
+    std::cout << "Options:\n";
+    std::cout << "  -i <iterations>  Specify the number of iterations of the tests to run(positive integer).\n";
+    std::cout << "  -h               Display this help message.\n";
+}
+
 #define hipErrorCheck(f) { hip_assert((f), __FILE__, __LINE__); }
 #define kernelErrorCheck() { hipErrorCheck(hipPeekAtLastError()); }
  
-int main() {
- 
+int main(int argc, char**argv) {
+    int iterations = 0;
+    int opt;
+
+    if (argc < 2)
+    {
+        print_help();
+        return EXIT_FAILURE;
+    }
+
+    // Parse command-line options
+    while ((opt = getopt(argc, argv, "i:h")) != -1) {
+        switch (opt) {
+            case 'i':
+                iterations = std::atoi(optarg);
+                if (iterations <= 0) {
+                    std::cerr << "Error: iterations must be a positive integer.\n";
+                    return EXIT_FAILURE;
+                }
+                break;
+            case 'h':
+                print_help();
+                return EXIT_SUCCESS;
+            default:
+                print_help();
+                return EXIT_FAILURE;
+        }
+    }
+
     double* x;
     double* x_h;
+
+    std::cout << "Number of iterations: " << iterations << std::endl;
 
     std::cout << "STRESSTEST\n";
  
@@ -64,7 +124,7 @@ int main() {
     int threads = 32;
     int fact = 1;//100;KAL
  
-    for (int j = 0; j < num_iters; ++j) {
+    for (int j = 0; j < iterations; ++j) {
  
         for (int n = 0; n < 25*fact; ++n) {
             hipErrorCheck(hipMemcpyAsync(x, x_h, sz, hipMemcpyHostToDevice));
