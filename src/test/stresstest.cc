@@ -35,11 +35,11 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
 
     dh_comms::time_interval time_interval;
     time_interval.start = __clock64(); // time in cycles
-    dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
+    //dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
 
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
     {
-        #pragma unroll
+    //    #pragma unroll
         for (int i = 0; i < n; ++i)
         {
             dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
@@ -47,6 +47,26 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
         }
     }
 }
+
+/*__global__ void __amd_crk_kernel(int n, int m, double* x, void *ptr) {
+    
+    dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
+
+    dh_comms::time_interval time_interval;
+    time_interval.start = __clock64(); // time in cycles
+    //dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
+
+    for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
+    {
+    //    #pragma unroll
+        for (int i = 0; i < n; ++i)
+        {
+            dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
+            x[idx] += i * m;
+        }
+    }
+}*/
+
 
 void cpuWork() {
     // Do some CPU "work".
@@ -59,6 +79,18 @@ inline void hip_assert(hipError_t err, const char *file, int line)
     {
         fprintf(stderr,"HIP error: %s %s %d\n", hipGetErrorString(err), file, line);
         exit(-1);
+    }
+}
+
+void instantiate_clones(dh_comms::dh_comms *comms)
+{
+    size_t array_size = 5 * 1024 * 128 + 17; // large enough to get full sub-buffers during run, and slightly unbalanced
+    int blocksize = 128;
+    const int no_blocks = (array_size + blocksize - 1) / blocksize;
+    if (comms)
+    {
+        void *rsrc = comms->get_dev_rsrc_ptr();
+        HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<no_blocks, blocksize>>>(NULL, rsrc);
     }
 }
 

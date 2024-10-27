@@ -68,7 +68,7 @@ set(STRESSTEST_NAME "stresstest")
 
 project(
     ${INTERCEPTOR_NAME}
-    LANGUAGES CXX
+    LANGUAGES CXX HIP
     VERSION ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}
     DESCRIPTION "Log Kernel Duration"
     HOMEPAGE_URL "https://github.com/AARInternal/logduration")
@@ -79,6 +79,8 @@ if("${CMAKE_PROJECT_NAME}" STREQUAL "${PROJECT_NAME}")
 else()
     set(INTERCEPTOR_TOPLEVEL_PROJECT OFF)
 endif()
+
+find_package(hip REQUIRED)
 
 if(INTERCEPTOR_TOPLEVEL_PROJECT)
     set(CMAKE_CXX_STANDARD

@@ -154,9 +154,14 @@ target_link_libraries(
 
 add_executable(${STRESSTEST_NAME} ${TEST_SRC})
 
+set_source_files_properties(${TEST_SRC} PROPERTIES LANGUAGE HIP)
+
+target_compile_options(${STRESSTEST_NAME} PRIVATE -fgpu-rdc  -Werror -Wall -Wextra)
+
 target_link_libraries(
     ${STRESSTEST_NAME}
   PRIVATE
+    ${ROCM_PATH}/lib/libhiprtc.so
     ${DH_COMMS_LIB}
 )
 
@@ -168,4 +173,8 @@ target_include_directories (
     ${ROOT_DIR}
     ${DH_COMMS_INCLUDE}
 )
-
+target_link_options (
+    ${STRESSTEST_NAME}
+  PRIVATE
+    -fgpu-rdc
+)

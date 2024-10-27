@@ -73,7 +73,8 @@ std::string getInstrumentedName(const std::string& func_decl) {
     size_t pos = result.find_last_of(')');
     if (pos != std::string::npos) {
         result.replace(pos, 1, ", void*)");
-        result.insert(0, OMNIPROBE_PREFIX);
+        pos = result.find_first_of(" ");
+        result.insert(pos+1, OMNIPROBE_PREFIX);
     }
     else
     {
@@ -81,6 +82,8 @@ std::string getInstrumentedName(const std::string& func_decl) {
         if (pos != std::string::npos)
         result.replace(pos, 1, "Pv.kd");
     }
+
+    std::cout << "Instrumented name: " << result << std::endl;
     
     return result;
 }
@@ -300,6 +303,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
                 std::string mangledName(name);
 
                 string strName = demangleName(name);
+                std::cout << "Kernel Name Found: " << strName << std::endl;
                 // If a kernel filter was supplied, match the demangled name to the filter. If there's no match, 
                 // skip this symbol because we don't want to run instrumented for kernels whose names don't
                 // match on the filter
