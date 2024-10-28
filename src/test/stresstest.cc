@@ -2,6 +2,7 @@
 #include "dh_comms.h"
 #include "dh_comms_dev.h"
 #include "time_interval_handler.h"
+#include "memory_heatmap.h"
 
 // Compile with hipcc -O3 --amdgpu-target=gfx908 -I${ROCM_PATH}/roctracer/include -L${ROCM_PATH}/roctracer/lib -lroctx64 test.cpp
  
@@ -12,7 +13,7 @@
 //#include <roctx.h>
  
  
-#define N 100  //2560
+#define N 2560
 #define num_iters 1 //KAL 1000
  
  
@@ -30,22 +31,59 @@ __global__ void kernel(double* x) {
  
 template<int n, int m>
 __global__ void __amd_crk_kernel(double* x, void *ptr) {
-    
-    dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
-
-    dh_comms::time_interval time_interval;
-    time_interval.start = __clock64(); // time in cycles
-    //dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
-
-    for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
+    if (ptr)
     {
-    //    #pragma unroll
-        for (int i = 0; i < n; ++i)
+        dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
+
+        void *new_ptr = rsrc++;
+        ptr = new_ptr;
+
+        dh_comms::time_interval time_interval;
+        time_interval.start = __clock64(); // time in cycles
+        dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
+        
+
+        size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx >= N)
         {
-            dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
-            x[idx] += i * m;
+            // scalar message without lane headers, single data item
+        //    int meaning_of_life = 42;
+         //   dh_comms::s_submit_message(rsrc, &meaning_of_life, sizeof(int), false, __LINE__);
+
+            return;
+        }
+        
+        // scalar message with lane headers, without data
+        //dh_comms::s_submit_message(rsrc, nullptr, 0, true, __LINE__);
+
+        // scalar message with lane headers, single data item
+        //size_t number_of_the_beast = 666;
+        //dh_comms::s_submit_message(rsrc, &number_of_the_beast, sizeof(size_t), true, __LINE__);
+
+        for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
+        {
+        //    #pragma unroll
+            for (int i = 0; i < n; ++i)
+            {
+          //      dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
+                x[idx] += i * m;
+            }
+        }
+        time_interval.stop = __clock64(); // time in cycles
+        //dh_comms::s_submit_time_interval(rsrc, &time_interval);
+    }
+    else
+    {
+        for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
+        {
+        //    #pragma unroll
+            for (int i = 0; i < n; ++i)
+            {
+                x[idx] += i * m;
+            }
         }
     }
+
 }
 
 /*__global__ void __amd_crk_kernel(int n, int m, double* x, void *ptr) {
@@ -144,23 +182,37 @@ int main(int argc, char**argv) {
     hipErrorCheck(hipHostMalloc(&x_h, sz));
  
     memset(x_h, 0, sz);
-    hipErrorCheck(hipMallocManaged(&x, sz));
-    hipErrorCheck(hipMemset(x, 0, sz));
+    hipErrorCheck(hipMalloc(&x, sz));
+    //hipErrorCheck(hipMemset(x, 0, sz));
  
-    hipStream_t stream;
-    hipErrorCheck(hipStreamCreate(&stream));
  
     hipFuncAttributes attr;
  
     int blocks = 80;
     int threads = 32;
     int fact = 1;//100;KAL
+
+
+    dh_comms::dh_comms dh_comms(256, 65536, false);
+    dh_comms.append_handler(std::make_unique<dh_comms::memory_heatmap_t>(1024*1024, false));
  
     for (int j = 0; j < iterations; ++j) {
  
         for (int n = 0; n < 25*fact; ++n) {
-            hipErrorCheck(hipMemcpyAsync(x, x_h, sz, hipMemcpyHostToDevice));
-            hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x);
+      //      hipErrorCheck(hipMemcpy(x, x_h, sz, hipMemcpyHostToDevice));
+            HIP_KERNEL_NAME(kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x);
+            kernelErrorCheck();
+            hipErrorCheck(hipDeviceSynchronize());
+            dh_comms.start();
+            HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x, dh_comms.get_dev_rsrc_ptr());
+            hipErrorCheck(hipDeviceSynchronize());
+            dh_comms.stop();
+            dh_comms.report();
+            hipErrorCheck(hipFree(x));
+
+            //hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x);
+            //hipLaunchKernelGGL(HIP_KERNEL_NAME(__amd_crk_kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x, NULL);
+            exit(0);
             kernelErrorCheck();
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,2>), dim3(blocks), dim3(threads), 0, 0, x);
             kernelErrorCheck();
@@ -250,6 +302,10 @@ int main(int argc, char**argv) {
  
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
+        
+        hipStream_t stream;
+        hipErrorCheck(hipStreamCreate(&stream));
+    
  
         for (int n = 0; n < 200*fact; ++n) {
             //roctxRangePushA("range1");
@@ -365,12 +421,12 @@ int main(int argc, char**argv) {
         cpuWork();
  
         hipErrorCheck(hipDeviceSynchronize());
+        hipErrorCheck(hipStreamDestroy(stream));
  
     }
  
     hipErrorCheck(hipHostFree(x_h));
     hipErrorCheck(hipFree(x));
-    hipErrorCheck(hipStreamDestroy(stream));
     //hipProfilerStop();
  
 }

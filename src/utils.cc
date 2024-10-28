@@ -74,6 +74,10 @@ std::string getInstrumentedName(const std::string& func_decl) {
     if (pos != std::string::npos) {
         result.replace(pos, 1, ", void*)");
         pos = result.find_first_of(" ");
+        size_t ret_type = result.find_first_of("(");
+        // If pos > ret_type this means that there's no return type in the kernel name
+        if (pos > ret_type)
+            pos = -1;
         result.insert(pos+1, OMNIPROBE_PREFIX);
     }
     else
@@ -397,13 +401,15 @@ uint32_t coCache::getArgSize(uint64_t kernel_object)
 
 extern decltype(hsa_executable_symbol_get_info)* hsa_executable_symbol_get_info_fn;
     
-uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name)
+uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name, hsa_agent_t queue_agent)
 {
     uint64_t object = 0;
     hsa_agent_t agent;
     uint32_t kernarg_size;
     CHECK_STATUS("Unable to identify agent for symbol", hsa_executable_symbol_get_info_fn(symbol, HSA_EXECUTABLE_SYMBOL_INFO_AGENT, reinterpret_cast<void *>(&agent)));
     CHECK_STATUS("Unable to get kernarg size", hsa_executable_symbol_get_info_fn(symbol, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_KERNARG_SEGMENT_SIZE, reinterpret_cast<void *>(&kernarg_size)));
+    if (queue_agent.handle && agent.handle != queue_agent.handle)
+        std::cout << "Something is amiss in findAlternative\n";
     lock_guard<std::mutex> lock(mutex_);
     auto it = lookup_map_.find(agent);
     if (it != lookup_map_.end())
@@ -425,9 +431,9 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
     return object;
 }
 
-uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t symbol, const std::string& name)
+uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t symbol, const std::string& name, hsa_agent_t queue_agent)
 {
-    return findAlternative(symbol, getInstrumentedName(std::string(name)));
+    return findAlternative(symbol, getInstrumentedName(std::string(name)), queue_agent);
 }
 
 

@@ -6,6 +6,6 @@ extern "C"{
     PUBLIC_API void getMessageHandlers(const std::string& kernel, uint64_t dispatch_id, std::vector<dh_comms::message_handler_base *>& outHandlers)
     {
         outHandlers.push_back(new time_interval_handler_t(kernel, dispatch_id,false));
-        outHandlers.push_back(new memory_heatmap_t(kernel, dispatch_id));
+        outHandlers.push_back(new memory_heatmap_t(kernel, dispatch_id, 1024*1024, false));
     }
 }

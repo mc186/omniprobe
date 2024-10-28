@@ -595,8 +595,8 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     memcpy(dst, src, (desc.explicit_args_count - 1) * sizeof(uint64_t));
     void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
     void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
-    // We want to all of the source kernargs except for it's original explicit arguments
-    size_t hidden_args_size = desc.kernarg_length - ((desc.explicit_args_count - 1) * sizeof(uint64_t));
+    // We want to copy all of the source kernargs except for it's original explicit arguments
+    size_t hidden_args_size = desc.kernarg_length - (desc.explicit_args_count * sizeof(uint64_t));
     memcpy(hidden_args_dst, hidden_args_src, hidden_args_size);
     /* The weird thing here is that, apparently, kernel arguments are 64bit aligned
      * regardless of the actual argument size. This really bit me working on this code
@@ -654,7 +654,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 // an argument list expanded by a single void *
                 if (run_instrumented_)
                 {
-                    alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_);
+                    alt_kernel_object = kernel_cache_.findInstrumentedAlternative(it->second.symbol_, it->second.name_, queues_[queue]);
                 }
                 else
                     alt_kernel_object = kernel_cache_.findAlternative(it->second.symbol_, it->second.name_);

@@ -144,8 +144,8 @@ public:
     coCache(HsaApiTable *apiTable);
     ~coCache();
     bool setLocation(hsa_agent_t agent, const std::string& directory, const std::string& strFilter, bool instrumented = true);
-    uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name);
-    uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name);
+    uint64_t findAlternative(hsa_executable_symbol_t symbol, const std::string& name, hsa_agent_t queue_agent = {0});
+    uint64_t findInstrumentedAlternative(hsa_executable_symbol_t, const std::string& name, hsa_agent_t queue_agent = {0});
     bool hasKernels(hsa_agent_t agent);
     uint32_t getArgSize(uint64_t kernel_object);
     bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);

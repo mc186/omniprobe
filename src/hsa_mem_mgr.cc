@@ -38,7 +38,9 @@ hsa_mem_mgr::~hsa_mem_mgr()
 
 void * hsa_mem_mgr::alloc(std::size_t size)
 {
-    return allocator_.allocate(size, pool_.agent_);
+    void *result = allocator_.allocate(size, pool_.agent_);
+    zero(result,size);
+    return result;
 }
 
 void hsa_mem_mgr::free(void *ptr)
