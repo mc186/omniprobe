@@ -126,7 +126,8 @@ void instantiate_clones(dh_comms::dh_comms *comms)
     if (comms)
     {
         void *rsrc = comms->get_dev_rsrc_ptr();
-        HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<no_blocks, blocksize>>>(NULL, rsrc);
+        double foo = 0;;
+        HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<no_blocks, blocksize>>>(&foo, rsrc);
     }
 }
 
@@ -194,7 +195,7 @@ int main(int argc, char**argv) {
     dh_comms::dh_comms dh_comms(256, 65536, false);
     dh_comms.append_handler(std::make_unique<dh_comms::memory_heatmap_t>(1024*1024, false));
     dh_comms.start();
-    HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x, dh_comms.get_dev_rsrc_ptr());
+    HIP_KERNEL_NAME(__amd_crk_kernel<2,2>)<<<dim3(blocks), dim3(threads)>>>(x, dh_comms.get_dev_rsrc_ptr());
     dh_comms.stop();
     dh_comms.report();
     HIP_KERNEL_NAME(kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x);

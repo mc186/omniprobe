@@ -681,10 +681,12 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 {
                     // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
+                    uint8_t test_align = kernel_cache_.getArgumentAlignment(packet->kernel_object);
                     if (run_instrumented_)
                     {
                         // Found an instrumented  kernel Vobject to use as an alternative
                         dispatch->kernel_object = alt_kernel_object;
+                        uint8_t align = kernel_cache_.getArgumentAlignment(alt_kernel_object);
                         assert(size);
                         if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args, run_instrumented_))
                         {

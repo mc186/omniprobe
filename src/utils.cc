@@ -82,9 +82,10 @@ std::string getInstrumentedName(const std::string& func_decl) {
     }
     else
     {
-        pos = result.find_last_of(".");
+        pos = result.find_last_of(".kd");
         if (pos != std::string::npos)
-        result.replace(pos, 1, "Pv.kd");
+            result.replace(pos-2, 3, "Pv.kd");
+        result = "__amd_crk_" + result;
     }
 
     //std::cout << "Instrumented name: " << result << std::endl;
@@ -232,10 +233,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
             return false;
         }
         else
-        {
             CHECK_STATUS("Error in loading executable object", status);
-            return false;
-        }
         p_kh = new KernelArgHelper(name); 
     }
     else
@@ -889,10 +887,12 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                     CHECK_COMGR(amd_comgr_get_metadata_kind(parm_map,&parm_kind));
                     if (parm_kind == AMD_COMGR_METADATA_KIND_MAP)
                     {
-                        amd_comgr_metadata_node_t parm_size, parm_type;
+                        amd_comgr_metadata_node_t parm_size, parm_type, parm_offset;
                         CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".size", &parm_size));
                         CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".value_kind", &parm_type));
+                        CHECK_COMGR(amd_comgr_metadata_lookup(parm_map, ".offset", &parm_offset));
                         size_t arg_size = std::stoul(get_metadata_string(parm_size));
+                        size_t arg_offset = std::stoul(get_metadata_string(parm_offset));
                         std::string parm_name = get_metadata_string(parm_type);
                         if (parm_name.rfind("hidden_",0) == 0)
                             desc.hidden_args_length += arg_size;
