@@ -35,8 +35,6 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
     {
         dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
 
-        void *new_ptr = rsrc++;
-        ptr = new_ptr;
 
         dh_comms::time_interval time_interval;
         time_interval.start = __clock64(); // time in cycles
@@ -65,12 +63,12 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
         //    #pragma unroll
             for (int i = 0; i < n; ++i)
             {
-          //      dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
+                dh_comms::v_submit_address(rsrc, x + idx, __LINE__);
                 x[idx] += i * m;
             }
         }
         time_interval.stop = __clock64(); // time in cycles
-        //dh_comms::s_submit_time_interval(rsrc, &time_interval);
+        dh_comms::s_submit_time_interval(rsrc, &time_interval);
     }
     else
     {
@@ -195,6 +193,14 @@ int main(int argc, char**argv) {
 
     dh_comms::dh_comms dh_comms(256, 65536, false);
     dh_comms.append_handler(std::make_unique<dh_comms::memory_heatmap_t>(1024*1024, false));
+    dh_comms.start();
+    HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x, dh_comms.get_dev_rsrc_ptr());
+    dh_comms.stop();
+    dh_comms.report();
+    HIP_KERNEL_NAME(kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x);
+    kernelErrorCheck();
+    hipErrorCheck(hipDeviceSynchronize());
+//    exit(0);
  
     for (int j = 0; j < iterations; ++j) {
  
@@ -203,18 +209,7 @@ int main(int argc, char**argv) {
             HIP_KERNEL_NAME(kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x);
             kernelErrorCheck();
             hipErrorCheck(hipDeviceSynchronize());
-            dh_comms.start();
-            HIP_KERNEL_NAME(__amd_crk_kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x, dh_comms.get_dev_rsrc_ptr());
-            hipErrorCheck(hipDeviceSynchronize());
-            dh_comms.stop();
-            dh_comms.report();
-            hipErrorCheck(hipFree(x));
-
-            //hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x);
-            //hipLaunchKernelGGL(HIP_KERNEL_NAME(__amd_crk_kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x, NULL);
-            exit(0);
-            kernelErrorCheck();
-            hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,2>), dim3(blocks), dim3(threads), 0, 0, x);
+            /*hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,2>), dim3(blocks), dim3(threads), 0, 0, x);
             kernelErrorCheck();
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,3>), dim3(blocks), dim3(threads), 0, 0, x);
             kernelErrorCheck();
@@ -295,10 +290,11 @@ int main(int argc, char**argv) {
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,39>), dim3(blocks), dim3(threads), 0, 0, x);
             kernelErrorCheck();
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,40>), dim3(blocks), dim3(threads), 0, 0, x);
-            kernelErrorCheck();
+            kernelErrorCheck();*/
             hipErrorCheck(hipMemcpyAsync(x_h, x, sz, hipMemcpyDeviceToHost));
             hipErrorCheck(hipDeviceSynchronize());
         }
+        exit(0);
  
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();

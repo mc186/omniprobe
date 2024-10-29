@@ -359,7 +359,7 @@ def main():
     load_config_files()
     parms  = parse_args()
     if len(parms.remaining) != 0 and not parms.dump_env == True:
-        print(f"Trying to run {parms.remaining[1:]}")
+        #print(f"Trying to run {parms.remaining[1:]}")
         capture_subprocess_output(parms.remaining[1:], setup_env(parms))
     elif parms.dump_env == True:
         setup_env(parms)

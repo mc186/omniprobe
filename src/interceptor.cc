@@ -583,6 +583,24 @@ void test_pointers(char *dst, char *src, arg_descriptor_t desc)
     std::cerr << "Src offset for hidden args: " << (src + desc.explicit_args_length - sizeof(void *)) - src << std::endl;
 }
 
+void dumpKernArgs(void *dst, void *src, arg_descriptor_t desc)
+{
+    uint32_t wordcount = desc.kernarg_length / 4;
+    std::cout << "dumpKernelArgs: Compare 2 segments with largest segment size " << std::dec << desc.kernarg_length << std::endl;
+    for(uint32_t i = 0; i < wordcount - 2; i++)
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t *)src)[i] << "\t" << std::setw(8) << std::setfill('0') << ((uint32_t *)dst)[i] <<std::endl;
+    std::cout << "\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 2] << std::endl;
+    std::cout << "\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 1] << std::endl;
+}
+
+
+void dumpKernArgs(void *args, uint32_t size)
+{
+    uint32_t wordcount = size / 4;
+    std::cout << "dumpKernelArgs: Single kernarg segment of size " << std::dec << size << std::endl;
+    for(uint32_t i = 0; i < wordcount; i++)
+        std::cout << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t *)args)[i] << std::endl;
+}
 
 void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descriptor_t desc)
 {
@@ -610,6 +628,7 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
      * */
     void **comms_loc = &(((void **)dst)[desc.explicit_args_count  - 1]);
     *comms_loc = comms;
+   // dumpKernArgs(dst, src, desc);
 }
 
 /*
@@ -641,7 +660,7 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
         sig = sig_pool_.back();
         sig_pool_.pop_back();
         dh_comms::dh_comms *comms = NULL;
-        uint64_t alt_kernel_object;
+        uint64_t alt_kernel_object = 0;
         // Are there any kernels in the cache?
         if (kernel_cache_.hasKernels(queues_[queue]))
         {
@@ -662,7 +681,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 {
                     // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
-                    // Has to be at least sizeof(void *) if we picked an instrumented kernel
                     if (run_instrumented_)
                     {
                         // Found an instrumented  kernel Vobject to use as an alternative
@@ -678,28 +696,23 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                             dispatch->kernarg_address = new_kernargs;
                             // Store the kernarg address so we can free it up at kernel completion
                             pending_kernargs_[sig] = new_kernargs;
+                            // Debug set things back
+                            //dispatch->kernarg_address = packet->kernarg_address;
+                            //dispatch->kernel_object = packet->kernel_object;
                         }
                     }
                     else
-                        dispatch->kernel_object = packet->kernel_object; // Restore the original kernel object because we're not rewriting the kernargs
-                    /*else
                     {
-                        assert(size);
-                        if (kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, args, run_instrumented_))
-                        {
-                            void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
-                            memcpy(new_kernargs, dispatch->kernarg_address, args.kernarg_length);
-
-                            comms = comms_mgr_.checkoutCommsObject(queues_[queue], kernel_objects_[dispatch->kernel_object].name_, dispatch_id);
-
-                            void **comms_loc = &(((void **)new_kernargs)[args.explicit_args_count - 1]);
-                            *comms_loc = comms->get_dev_rsrc_ptr();
-                            
-                            dispatch->kernarg_address = new_kernargs;
-                            pending_kernargs_[sig] = new_kernargs;
-                        }
-                    }*/
+                        dispatch->kernel_object = packet->kernel_object; // Restore the original kernel object because we're not rewriting the kernargs
+                        //dumpKernArgs(packet->kernarg_address, size);
+                    }
                 }
+               /* else
+                {
+                    uint32_t size = kernel_cache_.getArgSize(packet->kernel_object);
+                    if (size)
+                        dumpKernArgs(packet->kernarg_address, size);
+                }*/
             }
         }
         // Store the signal for processing at kernel completion
