@@ -130,6 +130,8 @@ typedef struct arg_descriptor {
     size_t explicit_args_count;
     size_t hidden_args_length;
     size_t kernarg_length;
+    uint32_t private_segment_size;
+    uint32_t group_segment_size;
 }arg_descriptor_t;
 
 
@@ -151,6 +153,7 @@ public:
     bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);
     bool getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented);
     uint8_t getArgumentAlignment(uint64_t kernel_object);
+    const amd_kernel_code_t* getKernelCode(uint64_t kernel_object);
 private:
     HsaApiTable *apiTable_;
     hsa_ven_amd_loader_1_00_pfn_t loader_api_;

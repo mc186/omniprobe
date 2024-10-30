@@ -32,8 +32,14 @@ set ( LIB_SRC
   ${LIB_DIR}/time_interval_handler.cc
 )
 
+set (HEATMAP_EXAMPLE "heatmap_example")
+
 set (TEST_SRC
     ${LIB_DIR}/test/stresstest.cc
+)
+
+set (HEATMAP_SRC
+    ${LIB_DIR}/test/heatmap_example.cc
 )
 
 find_package(Python COMPONENTS Development)
@@ -178,3 +184,33 @@ target_link_options (
   PRIVATE
     -fgpu-rdc
 )
+
+add_executable(${HEATMAP_EXAMPLE} ${HEATMAP_SRC})
+
+set_source_files_properties(${HEATMAP_SRC} PROPERTIES LANGUAGE HIP)
+
+target_compile_options(${HEATMAP_EXAMPLE} PRIVATE -fgpu-rdc  -Werror -Wall -Wextra)
+
+target_link_libraries(
+    ${HEATMAP_EXAMPLE}
+  PRIVATE
+    ${ROCM_PATH}/lib/libhiprtc.so
+    ${DH_COMMS_LIB}
+)
+
+target_include_directories (
+    ${HEATMAP_EXAMPLE}
+  PRIVATE
+    ${LIB_DIR}/test
+    ${ROCM_ROOT_DIR}/include
+    ${ROOT_DIR}
+    ${DH_COMMS_INCLUDE}
+)
+target_link_options (
+    ${HEATMAP_EXAMPLE}
+  PRIVATE
+    -fgpu-rdc
+)
+
+
+

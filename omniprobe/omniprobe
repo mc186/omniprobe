@@ -298,7 +298,7 @@ def add_general_group(parser):
         metavar="",
         dest="cache_location",
         required=False,
-        default=get_default_cache_location(),
+        default="",
         help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
     )
     

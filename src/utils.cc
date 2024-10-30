@@ -150,7 +150,7 @@ coCache::~coCache()
     }
 }
 
-uint8_t coCache::getArgumentAlignment(uint64_t kernel_object)
+const amd_kernel_code_t* coCache::getKernelCode(uint64_t kernel_object)
 {
       const amd_kernel_code_t* kernel_code = NULL;
       hsa_status_t status = loader_api_.hsa_ven_amd_loader_query_host_address(
@@ -159,6 +159,12 @@ uint8_t coCache::getArgumentAlignment(uint64_t kernel_object)
       if (HSA_STATUS_SUCCESS != status) {
         kernel_code = reinterpret_cast<amd_kernel_code_t*>(kernel_object);
       }
+      return kernel_code;
+}
+
+uint8_t coCache::getArgumentAlignment(uint64_t kernel_object)
+{
+      const amd_kernel_code_t* kernel_code = getKernelCode(kernel_object);
       return kernel_code->kernarg_segment_alignment;
 }
 
@@ -868,12 +874,16 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
             CHECK_COMGR(amd_comgr_metadata_lookup(value,".symbol", &field));
             std::string strName = get_metadata_string(field);
             strName = demangleName(strName.c_str());
-            arg_descriptor_t desc = {0,0,0,0};
+            arg_descriptor_t desc = {};
             amd_comgr_metadata_node_t args;
             CHECK_COMGR(amd_comgr_metadata_lookup(value, ".args", &args));
             CHECK_COMGR(amd_comgr_get_metadata_kind(args, &kind));
-            amd_comgr_metadata_node_t kernarg_length;
+            amd_comgr_metadata_node_t kernarg_length,private_size, group_size;
             CHECK_COMGR(amd_comgr_metadata_lookup(value, ".kernarg_segment_size", &kernarg_length));
+            CHECK_COMGR(amd_comgr_metadata_lookup(value, ".private_segment_fixed_size", &private_size));
+            CHECK_COMGR(amd_comgr_metadata_lookup(value, ".group_segment_fixed_size", &group_size));
+            desc.private_segment_size = std::stoul(get_metadata_string(private_size));
+            desc.group_segment_size = std::stoul(get_metadata_string(group_size));
             desc.kernarg_length = std::stoul(get_metadata_string(kernarg_length));
             if (kind == AMD_COMGR_METADATA_KIND_LIST)
             {

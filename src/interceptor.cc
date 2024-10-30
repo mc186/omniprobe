@@ -668,7 +668,8 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             if (it != kernel_objects_.end())
             {
                 uint64_t alt_kernel_object = 0;
-                arg_descriptor_t args = {0,0,0};
+                arg_descriptor_t args = {};
+                arg_descriptor_t orig_args = {};
                 // If we're running in instrumented mode, we're looking for a certain kernel naming convention along with
                 // an argument list expanded by a single void *
                 if (run_instrumented_)
@@ -681,6 +682,8 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 {
                     // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
+                    uint32_t original_size = kernel_cache_.getArgSize(packet->kernel_object);
+                    kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, orig_args, false);
                     uint8_t test_align = kernel_cache_.getArgumentAlignment(packet->kernel_object);
                     if (run_instrumented_)
                     {
@@ -696,6 +699,8 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
 
                             fixupKernArgs(new_kernargs, packet->kernarg_address, comms->get_dev_rsrc_ptr(), args);
                             dispatch->kernarg_address = new_kernargs;
+                            dispatch->private_segment_size = args.private_segment_size;
+                            dispatch->group_segment_size = args.group_segment_size;
                             // Store the kernarg address so we can free it up at kernel completion
                             pending_kernargs_[sig] = new_kernargs;
                             // Debug set things back
