@@ -986,3 +986,16 @@ bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
 }
 
 
+randomDispatcher::randomDispatcher(int distro): generator_(static_cast<unsigned>(std::time(nullptr))), distribution_(1, distro)
+{
+}
+
+randomDispatcher::~randomDispatcher()
+{
+}
+
+bool randomDispatcher::canDispatch()
+{
+    return distribution_(generator_) == 1;
+}
+

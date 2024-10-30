@@ -25,6 +25,8 @@ THE SOFTWARE.
 #include <cxxabi.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <random>
+#include <ctime>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -205,6 +207,16 @@ public:
     bool setHandlers(const std::vector<std::string>& handlers);
 private:
     std::map<void *, getMessageHandlers_t> plugins_;
+};
+
+class randomDispatcher{
+public:
+    randomDispatcher(int distro);
+    ~randomDispatcher();
+    bool canDispatch();
+private:
+    std::mt19937 generator_;
+    std::uniform_int_distribution<int> distribution_;
 };
 
 

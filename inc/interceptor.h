@@ -54,6 +54,7 @@ void comms_runner(comms_mgr& mgr);
 #define REPLAY_QUEUE_SIZE 512
 #define SIGPOOL_INCREMENT 8
 #define BUFFERPOOL_INCREMENT 8
+#define RANDOM_DISPATCH_DISTRIBUTION 100
 
 #ifndef NDEBUG
 	template<typename ...Args>
@@ -170,6 +171,7 @@ private:
     std::thread comms_runner_;
     std::vector<dh_comms::message_handler_base *> mh_pool_;
     std::atomic<uint64_t> dispatch_count_;
+    randomDispatcher random_dispatch_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;
