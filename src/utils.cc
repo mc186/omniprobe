@@ -180,17 +180,29 @@ bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descrip
     bool bReturn = false;
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = arg_map_.find(agent);
+    size_t clone_hidden_args_length = 0;
     if (it != arg_map_.end())
     {
         std::string strName;
         if (instrumented)
+        {
+            auto itclone = it->second.find(name);
+            if (itclone != it->second.end())
+            {
+                // If there are hidden arguments in the clone, compute how many bytes of kernarg data comprises the hidden kernargs.
+                if (itclone->second.hidden_args_length)
+                    clone_hidden_args_length = itclone->second.kernarg_length - (itclone->second.explicit_args_count * sizeof(void *));;
+            }
+
             strName = getInstrumentedName(name);
+        }
         else
             strName = name;
         auto dit = it->second.find(strName);
         if (dit != it->second.end())
         {
             desc = dit->second;
+            desc.clone_hidden_args_length = clone_hidden_args_length;
             bReturn = true;
         }
     }

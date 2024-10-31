@@ -610,12 +610,23 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     // The descriptor here is a descriptor of the instrumented kernel, so
     // the parameter list of the non-instrumented original is always short one void*
     // relative to the desriptor supplied to this method
-    memcpy(dst, src, (desc.explicit_args_count - 1) * sizeof(uint64_t));
-    void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
-    void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
     // We want to copy all of the source kernargs except for it's original explicit arguments
-    size_t hidden_args_size = desc.kernarg_length - (desc.explicit_args_count * sizeof(uint64_t));
-    memcpy(hidden_args_dst, hidden_args_src, hidden_args_size);
+    memcpy(dst, src, (desc.explicit_args_count - 1) * sizeof(uint64_t));
+    // Compute where we want to copy hidden args. Right after the last explicit argument.
+    void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
+    // We copy from the non-instrumented clone from the location after the last explicit arg in the src.
+    // It has 1 fewer arguments than the instrumented clone (i.e. no dh_comms *)
+    void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
+    // In Triton, for some reason we sometimes get non-instrumented kernsl with no hidden arguments
+    // So we only want to copy hidden arguments if there ARE some. If there are, the length to 
+    // copy is the original size of the kernarg data - the size of explicit arguments. But since its
+    // a kernarg segment from a non-instrumented clone, we subtract one from the arg count
+    if (desc.clone_hidden_args_length)
+    {
+        // assert that we aren't going to copy a larger kernarg segment into a smaller one
+        assert(desc.clone_hidden_args_length <= desc.kernarg_length - (desc.explicit_args_count * sizeof(uint64_t)));
+        memcpy(hidden_args_dst, hidden_args_src, desc.clone_hidden_args_length);
+    }
     /* The weird thing here is that, apparently, kernel arguments are 64bit aligned
      * regardless of the actual argument size. This really bit me working on this code
      * because the metadata on kernel objects that is retrievable from comgr shows argument lengths

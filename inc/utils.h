@@ -134,6 +134,7 @@ typedef struct arg_descriptor {
     size_t kernarg_length;
     uint32_t private_segment_size;
     uint32_t group_segment_size;
+    size_t clone_hidden_args_length;
 }arg_descriptor_t;
 
 
