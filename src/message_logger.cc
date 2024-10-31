@@ -18,6 +18,8 @@ message_logger_t::message_logger_t(const std::string& strKernel, uint64_t dispat
         log_file_ = &std::cout;
     else
         log_file_ = new std::ofstream(location, std::ios::app);
+    
+    *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,address" << std::endl;
 }
 
 message_logger_t::~message_logger_t()
@@ -41,9 +43,10 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
     dh_comms::wave_header_t hdr = message.wave_header();
 
 
-    *log_file_ << "\"" << strKernel_ << "\"," << std::dec << dispatch_id_ << ",";
 
-    *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << message.wave_header().exec << ",";
+    *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.src_loc_idx << "," << dispatch_id_ << ",";
+
+    *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
     for (size_t i = 0; i != message.no_data_items(); ++i)
     {
         uint64_t address = *(const uint64_t *)message.data_item(i);
@@ -63,7 +66,7 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
 
 void message_logger_t::report()
 {
-    printf("Message Logger complete.\n");
+    printf("Omniprobe Message Logger complete.\n");
 }
 
 void message_logger_t::clear()
