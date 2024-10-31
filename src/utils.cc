@@ -486,7 +486,7 @@ unsigned int getLogDurConfig(std::map<std::string, std::string>& config) {
 
     config["LOGDUR_FILTER"] = logDurKernelFilter ? logDurKernelFilter : "";
 
-    config["LOGDUR_DISPATHCES"] = logDurDispatches ? logDurDispatches : "";
+    config["LOGDUR_DISPATCHES"] = logDurDispatches ? logDurDispatches : "";
 
     return config.size();
 }
@@ -1011,3 +1011,56 @@ bool randomDispatcher::canDispatch()
     return distribution_(generator_) == 1;
 }
 
+dispatchController::dispatchController() : randomDispatcher_(RANDOM_DISPATCH_DISTRIBUTION)
+{
+    std::map<std::string, std::string> config;
+    getLogDurConfig(config);
+    auto it = config.find("LOGDUR_DISPATCHES");
+    if (it != config.end())
+    {
+        if (it->second == "random")
+        {
+            bRandomDispatch_ = true;
+            bAllDispatch_ = false;
+            bOneDispatch_ = false;
+        }
+        else if (it->second == "all")
+        {
+            bAllDispatch_ = true;
+            bRandomDispatch_ = false;
+            bOneDispatch_ = false;
+        }
+        else if (it->second == "1")
+        {
+            bOneDispatch_ = true;
+            bAllDispatch_ = false;
+            bRandomDispatch_ = false;
+        }
+    }
+    else
+        bAllDispatch_ = true;
+}
+
+dispatchController::~dispatchController()
+{
+}
+
+bool dispatchController::canDispatch(uint64_t kernel_object)
+{
+    if (bRandomDispatch_)
+        return randomDispatcher_.canDispatch();
+    else if (bOneDispatch_)
+    {
+        bool bReturn = false;
+        auto it = dispatched_kernels_.find(kernel_object);
+        if (it == dispatched_kernels_.end())
+        {
+            dispatched_kernels_[kernel_object] = true;
+            return true;
+        }
+        else
+            return false;
+    }
+    else
+        return true;
+}

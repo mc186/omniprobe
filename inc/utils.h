@@ -79,6 +79,9 @@ THE SOFTWARE.
 #define RH_PAGE_SIZE 0x1000
 #define RH_PAGE_MASK 0x0FFF
 
+
+#define RANDOM_DISPATCH_DISTRIBUTION 100
+
 using namespace std;
 
 #define CHECK_STATUS(msg, status) do {                                                             \
@@ -218,6 +221,19 @@ public:
 private:
     std::mt19937 generator_;
     std::uniform_int_distribution<int> distribution_;
+};
+
+class dispatchController{
+public:
+    dispatchController();
+    ~dispatchController();
+    bool canDispatch(uint64_t kernel_object);
+private:
+    bool bAllDispatch_;
+    bool bRandomDispatch_;
+    bool bOneDispatch_;
+    std::map<uint64_t, bool> dispatched_kernels_;
+    randomDispatcher randomDispatcher_;
 };
 
 

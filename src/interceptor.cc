@@ -142,7 +142,7 @@ void hsaInterceptor::cleanup()
 
 hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uint64_t failed_tool_count, const char* const* failed_tool_names) : 
     signal_runner_(signal_runner), cache_watcher_(cache_watcher), kernel_cache_(table), allocator_(table, std::cerr), 
-        comms_mgr_(table), comms_runner_(comms_runner, std::ref(comms_mgr_)), random_dispatch_(RANDOM_DISPATCH_DISTRIBUTION) 
+        comms_mgr_(table), comms_runner_(comms_runner, std::ref(comms_mgr_)) 
 {
     apiTable_ = table;
     getLogDurConfig(config_);
@@ -680,7 +680,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
             {
                 uint64_t alt_kernel_object = 0;
                 arg_descriptor_t args = {};
-                arg_descriptor_t orig_args = {};
                 // If we're running in instrumented mode, we're looking for a certain kernel naming convention along with
                 // an argument list expanded by a single void *
                 if (run_instrumented_)
@@ -693,10 +692,8 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                 {
                     // What's the kernarg buffer size for this new kernel?
                     uint32_t size = kernel_cache_.getArgSize(alt_kernel_object);
-                    uint32_t original_size = kernel_cache_.getArgSize(packet->kernel_object);
-                    kernel_cache_.getArgDescriptor(queues_[queue], it->second.name_, orig_args, false);
-                    uint8_t test_align = kernel_cache_.getArgumentAlignment(packet->kernel_object);
-                    if (run_instrumented_)
+                    //uint8_t test_align = kernel_cache_.getArgumentAlignment(packet->kernel_object);
+                    if (run_instrumented_ && dispatcher_.canDispatch(alt_kernel_object))
                     {
                         // Found an instrumented  kernel Vobject to use as an alternative
                         dispatch->kernel_object = alt_kernel_object;
@@ -712,11 +709,13 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                             dispatch->kernarg_address = new_kernargs;
                             dispatch->private_segment_size = args.private_segment_size;
                             dispatch->group_segment_size = args.group_segment_size;
-                            // Store the kernarg address so we can free it up at kernel completion
+                            // Store the new kernarg address so we can free it up at kernel completion
                             pending_kernargs_[sig] = new_kernargs;
-                            // Debug set things back
-                            //dispatch->kernarg_address = packet->kernarg_address;
-                            //dispatch->kernel_object = packet->kernel_object;
+                        }
+                        else
+                        {
+                            std::cerr << "Missing arg descriptor for " << it->second.name_ << " aborting in line " << __LINE__ << " of file " << __FILE__ << std::endl;
+                            abort();
                         }
                     }
                     else
@@ -725,12 +724,6 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         //dumpKernArgs(packet->kernarg_address, size);
                     }
                 }
-               /* else
-                {
-                    uint32_t size = kernel_cache_.getArgSize(packet->kernel_object);
-                    if (size)
-                        dumpKernArgs(packet->kernarg_address, size);
-                }*/
             }
         }
         // Store the signal for processing at kernel completion
