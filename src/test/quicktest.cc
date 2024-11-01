@@ -24,16 +24,6 @@ __global__ void kernel(double* x) {
     }
 }
 
-template<int n, int m>
-__global__ void __amd_crk_kernel(double* x, void *ptr) {
-    for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
-    {
-        for (int i = 0; i < n; ++i)
-        {
-            x[idx] += i * m;
-        }
-    }
-}
 inline void hip_assert(hipError_t err, const char *file, int line)
 {
     if (err != hipSuccess)

@@ -73,7 +73,7 @@ private:
 
 #define DH_SUB_BUFFER_COUNT 256
 #define DH_THREAD_COUNT 1
-#define DH_SUB_BUFFER_CAPACITY (64 * 1024) 
+#define DH_SUB_BUFFER_CAPACITY (256 * 1024) 
 
 
 class default_message_handler : public dh_comms::message_handler_base
