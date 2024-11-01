@@ -921,7 +921,7 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                         else
                         {
                             desc.explicit_args_count++;
-                            desc.explicit_args_length += arg_size;
+                            desc.explicit_args_length = arg_offset + arg_size;
                         }
                     }
                 }

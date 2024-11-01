@@ -616,7 +616,8 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
     // We copy from the non-instrumented clone from the location after the last explicit arg in the src.
     // It has 1 fewer arguments than the instrumented clone (i.e. no dh_comms *)
-    void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
+    //void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
+    void *hidden_args_src = &(((char *)src)[desc.explicit_args_length - sizeof(void *)]);
     // In Triton, for some reason we sometimes get non-instrumented kernsl with no hidden arguments
     // So we only want to copy hidden arguments if there ARE some. If there are, the length to 
     // copy is the original size of the kernarg data - the size of explicit arguments. But since its
@@ -637,7 +638,13 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
      * size. I don't know how portable this is between code object versions. I'm assuming it is some
      * aspect of code objecdt first combined with the expecations of the GPU firmware.
      * */
-    void **comms_loc = &(((void **)dst)[desc.explicit_args_count  - 1]);
+    //void **comms_loc = &(((void **)dst)[desc.explicit_args_count  - 1]);
+    // This computation using explicit_args_length is more adaptable to changes in the way the compiler
+    // and runtime pack kernel arguments. For example 2 four-byte args might be packed into a single
+    // 64 bit slot and the individual parms might not be 64-bit aligned. For any kernel where that 
+    // turns out to be the case, this address calculation with be resilient whether the args
+    // are packed or not.
+    void **comms_loc = (void **)&(((char *)dst)[desc.explicit_args_length  - sizeof(void *)]);
     *comms_loc = comms;
    // dumpKernArgs(dst, src, desc);
 }
