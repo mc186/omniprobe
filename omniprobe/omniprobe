@@ -142,7 +142,7 @@ triton_config = {"TRITON_LOGGER_LEVEL": "3",
                  "TRITON_ALWAYS_COMPILE": "1", 
                  "TRITON_DISABLE_LINE_INFO": "0",
                  "TRITON_HIP_LLD_PATH": f"{get_rocm_path()}/llvm/bin/ld.lld",
-                 "AMDCGN_INSTRUMENTATION_FUNCTIONS_FILE": f"{get_omniprobe_home()}/triton/dh_comms_dev.{get_local_isa()}.bc",
+                 "AMDCGN_INSTRUMENTATION_FUNCTIONS_FILE": f"{get_omniprobe_home()}/triton/dh_comms_dev.co4.{get_local_isa()}.bc",
                  "LLVM_PASS_PLUGIN_PATH": f"{get_omniprobe_home()}/triton/libAMDGCNMemTrace.so"
                  }
 config_path = os.path.dirname(__file__) + "/config"

@@ -190,3 +190,16 @@ set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/RPM/rpm_post
 set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/RPM/rpm_postun")
 
 include(CPack)
+
+include(ExternalProject)
+
+ExternalProject_Add(
+    dh_comms
+    GIT_REPOSITORY https://github.com/AARInternal/dh_comms.git
+    GIT_TAG main
+    PREFIX ${CMAKE_BINARY_DIR}/dh_comms
+    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=~/.local
+)
+
+# Add dependency to your target
+add_dependencies(${INTERCEPTOR_TARGET} dh_comms)
