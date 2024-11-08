@@ -371,7 +371,7 @@ def add_general_group(parser):
         required=False,
         nargs='+',
         default=[f"{get_omniprobe_home()}/lib/libdefaultMessageHandlers64.so"],
-        help=f"\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module.\n\tValid values are {names}\n"
+        help=f"\tThe analyzer(s) to use for processing data being streamed from instrumented kernels. \n\tValid values are {names} or a reference to any shared library that implements an omniprobe message handler.\n"
     )
     
     general_group.add_argument(
