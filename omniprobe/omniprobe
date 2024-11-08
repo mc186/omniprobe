@@ -148,6 +148,8 @@ triton_config = {"TRITON_LOGGER_LEVEL": "3",
 config_path = os.path.dirname(__file__) + "/config"
 rocm_path = get_rocm_path()
 
+analytics_config = {}
+
 op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/lib/liblogDuration64.so"}
 
 def validate_triton_config():
@@ -234,11 +236,13 @@ def setup_env(parms):
 def load_config_files():
     global config_path
     global op_run_env
+    global analytics_config
     files = os.listdir(config_path)
     for file in files:
         f = open(f"{config_path}/{file}", "r")
         txt = f.read()
         p = eval(txt)
+        #Is it a general config file?
         if isinstance(p, dict):
             keys = p.keys();
             for key in keys:
@@ -246,10 +250,25 @@ def load_config_files():
                     print(f"Duplicate configuration value for {key} in {config_path}/config/{file}")
                 else:
                     op_run_env[key] = p[key]
+        #If it's a list then this is a description of all the analytics that are available
+        elif isinstance(p, list):
+            for rec in p:
+                if 'name' in rec and 'description' in rec and 'lib_name' in rec:
+                    analytics_config[rec['name']] = rec
+                else:
+                    print("Invalid analytic config file. Each entry must contain a name, description, and lib_name")
+                    sys.exit(1)
+
 
 
 def add_general_group(parser):
     general_group = parser.add_argument_group("General omniprobe arguments")
+
+    global analytics_config
+
+    names = []
+    for rec in analytics_config.keys():
+        names.append(analytics_config[rec]['name'])
 
     general_group.add_argument (
         "-v",
@@ -341,6 +360,7 @@ def add_general_group(parser):
         default="console",
         help="\tThe location where all of your data should be logged. By default it will be to the console."
     )
+
     
     general_group.add_argument (
         "-a",
@@ -351,7 +371,7 @@ def add_general_group(parser):
         required=False,
         nargs='+',
         default=[f"{get_omniprobe_home()}/lib/libdefaultMessageHandlers64.so"],
-        help="\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module"
+        help=f"\tYour custom analyzer for processing data being streamed from instrumented kernels. Can be a shared library reference or a python module.\n\tValid values are {names}\n"
     )
     
     general_group.add_argument(
@@ -385,10 +405,20 @@ def parse_args():
 def main():
     print("\nOmniprobe is developed by Advanced Micro Devices, Research and Advanced Development")
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
+    global analytics_config
     load_config_files()
     parms  = parse_args()
+    handlers = []
+    for h in parms.handlers:
+        if not h.endswith(".so"):
+            if h in analytics_config:
+                handlers.append(analytics_config[h]['lib_name'])
+            else:
+                print(f"{h} is not a valid analyzer. Ignoring.")
+        else:
+            handlers.append(h)
+    parms.handlers = handlers
     if len(parms.remaining) != 0 and not parms.dump_env == True:
-        #print(f"Trying to run {parms.remaining[1:]}")
         capture_subprocess_output(parms.remaining[1:], new_env=setup_env(parms))
     elif parms.dump_env == True:
         setup_env(parms)
