@@ -22,7 +22,7 @@
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
 set(LOGGER_PLUGIN_NAME  "LogMessages64")
-set(LOGGER_LIB = "${LOGGER_PLUGIN_NAME}")
+set(MEM_ANALYSIS_PLUGIN_NAME  "MemAnalysis64")
 
 set ( PLUGIN_LIB "${DEFAULT_PLUGIN_NAME}" )
 
@@ -37,11 +37,17 @@ set (LOGGER_PLUGIN_SRC
   ${PLUGIN_DIR}/logger_plugin.cc
 )
 
+set(MEM_ANALYSIS_SRC
+  ${LIB_DIR}/memory_analysis_wrapper.cc
+  ${PLUGIN_DIR}/memory_analysis_plugin.cc
+)
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64)
 add_library ( ${DEFAULT_PLUGIN_NAME} SHARED ${DEFAULT_PLUGIN_SRC})
 add_library ( ${LOGGER_PLUGIN_NAME} SHARED ${LOGGER_PLUGIN_SRC})
+add_library ( ${MEM_ANALYSIS_PLUGIN_NAME} SHARED ${MEM_ANALYSIS_SRC})
 
 target_include_directories (
     ${DEFAULT_PLUGIN_NAME}
@@ -57,6 +63,18 @@ target_include_directories (
 
 target_include_directories (
     ${LOGGER_PLUGIN_NAME}
+  PRIVATE
+    ${LIB_DIR}
+    ${ROCM_ROOT_DIR}/include
+    ${ROOT_DIR}
+    ${HSA_RUNTIME_INC_PATH}
+    ${HSA_KMT_LIB_PATH}/..
+    ${DH_COMMS_INCLUDE}
+    ${Python_INCLUDE_DIRS}
+)
+
+target_include_directories (
+    ${MEM_ANALYSIS_PLUGIN_NAME}
   PRIVATE
     ${LIB_DIR}
     ${ROCM_ROOT_DIR}/include
@@ -79,6 +97,16 @@ target_link_libraries(
 
 target_link_libraries(
     ${DEFAULT_PLUGIN_NAME}
+  PRIVATE
+    ${HSA_RUNTIME_LIB}
+    c
+    stdc++
+    stdc++fs
+    ${DH_COMMS_LIB}
+)
+
+target_link_libraries(
+    ${MEM_ANALYSIS_PLUGIN_NAME}
   PRIVATE
     ${HSA_RUNTIME_LIB}
     c

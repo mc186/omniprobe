@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include "message.h"
 #include "message_handlers.h"
 
 class memory_heatmap_t : public dh_comms::message_handler_base

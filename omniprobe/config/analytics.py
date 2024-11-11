@@ -8,5 +8,10 @@
         "name": "Heatmap",
         "description": "Produce a per dispatch memory heatmap",
         "lib_name": "libdefaultMessageHandlers64.so"
+    },
+    {
+        "name": "MemoryAnalysis",
+        "description": "Analyze memory access efficiency",
+        "lib_name": "libMemAnalysis64.so"
     }
 ]

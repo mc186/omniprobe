@@ -20,7 +20,7 @@ memory_heatmap_t::~memory_heatmap_t()
 
 bool memory_heatmap_t::handle(const dh_comms::message_t &message)
 {
-    if ((dh_comms::message_type)message.wave_header().user_type != dh_comms::message_type::address)
+    if (message.wave_header().user_type != dh_comms::message_type::address)
     {
         if (verbose_)
         {
