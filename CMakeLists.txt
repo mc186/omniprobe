@@ -196,7 +196,7 @@ include(ExternalProject)
 ExternalProject_Add(
     dh_comms
     GIT_REPOSITORY https://github.com/AARInternal/dh_comms.git
-    GIT_TAG  memory_analysis
+    GIT_TAG  main
     PREFIX ${CMAKE_BINARY_DIR}/dh_comms
     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=~/.local
 )
