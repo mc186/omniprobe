@@ -195,8 +195,16 @@ def setup_env(parms):
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
             env_dump['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+        elif not os.path.exists(parms.cache_location):
+            try:
+                os.makedirs(parms.cache_location)
+                env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+                env_dump['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+            except OSError as e:
+                print(f"WARNING: Cache location {parms.cache_location} could not be created. Will use only instrumented kernels found in the application binary.")
+                print(e)
         else:
-            print(f"WARNING: cache location {parms.cache_location} either doesn't exist or it isn't a directory. Will only use instrumented kernels found in the application binary.")
+            print(f"WARNING: Cache location {parms.cache_location} either doesn't exist, can't be created, or it isn't a directory. Will only use instrumented kernels found in the application binary.")
 
     if len(parms.dispatches):
         env['LOGDUR_DISPATCHES'] = parms.dispatches

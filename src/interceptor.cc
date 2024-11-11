@@ -358,7 +358,7 @@ void cache_watcher()
             perror("inotify_init");
             exit(EXIT_FAILURE);
         }
-        
+
         for (const auto& entry : fs::directory_iterator(dir)) 
         {
             if (entry.is_directory()) 
