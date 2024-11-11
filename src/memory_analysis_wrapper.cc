@@ -21,7 +21,7 @@ bool memory_analysis_wrapper_t::handle(const dh_comms::message_t &message) {
 
 
 void memory_analysis_wrapper_t::report() {
-  std::cout << "Memory analysis for " << kernel_ << "dispatch_id[" << std::dec << dispatch_id_ << "]" << std::endl;
+  std::cout << "Memory analysis for " << kernel_ << " dispatch_id[" << std::dec << dispatch_id_ << "]" << std::endl;
   wrapped_.report();
 }
 
