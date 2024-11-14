@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <hip/hip_profile.h>
 //#include <roctx.h>
- 
+#include <dh_comms_dev.h> 
  
 #define N 10  //2560
 #define num_iters 1 //KAL 1000

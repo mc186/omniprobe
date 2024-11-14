@@ -42,6 +42,31 @@ std::string demangleName(const char *name)
            free(realname);
        }
    }
+   else
+   {
+        if (realname)
+            free(realname);
+        // We're going through these gyrations here because the OMNIPROBE_PREFIX is being
+        // prepended by the LLVM plugin AFTER kernel name mangling has already occurred.
+        // So we have to do some special kind of non-standard de-mangling by stripping the
+        // OMNIPROBE_PREFIX from the name before demangling, then adding it back in the
+        // appropriate place.
+        if (!strncmp(name, OMNIPROBE_PREFIX, strlen(OMNIPROBE_PREFIX)))
+        {
+            realname = abi::__cxa_demangle(&name[strlen(OMNIPROBE_PREFIX)],0,0, &status);
+            if (status == 0 && realname)
+            {
+                result = realname;
+                size_t pos = result.find_first_of(" ");
+                size_t ret_type = result.find_first_of("(");
+                // If pos > ret_type this means that there's no return type in the kernel name
+                if (pos > ret_type)
+                    pos = -1;
+                result.insert(pos+1, OMNIPROBE_PREFIX);
+                free(realname);
+            }
+        }
+   }
    return result.length() ? result : std::string(name);
 }
 
