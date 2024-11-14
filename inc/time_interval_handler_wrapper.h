@@ -1,21 +1,15 @@
 #pragma once
 #include "dh_comms.h"
 #include "message_handlers.h"
-
-struct time_interval
-{
-    uint64_t start;
-    uint64_t stop;
-};
+#include "time_interval_handler.h"
 
 
-
-class time_interval_handler_t : public dh_comms::message_handler_base
+class time_interval_handler_wrapper : public dh_comms::message_handler_base
 {
 public:
-    time_interval_handler_t(const std::string& strKernel, uint64_t dispatch_id, bool verbose = false);
-    time_interval_handler_t(const time_interval_handler_t &) = default;
-    virtual ~time_interval_handler_t();
+    time_interval_handler_wrapper(const std::string& strKernel, uint64_t dispatch_id, bool verbose = false);
+    time_interval_handler_wrapper(const time_interval_handler_wrapper &) = default;
+    virtual ~time_interval_handler_wrapper();
     virtual bool handle(const dh_comms::message_t &message) override;
     virtual void report() override;
     virtual void clear() override;
@@ -28,5 +22,6 @@ private:
     bool verbose_;
     std::string strKernel_;
     uint64_t dispatch_id_;
+    dh_comms::time_interval_handler_t wrapped_;
 
 };

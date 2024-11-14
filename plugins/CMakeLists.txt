@@ -27,8 +27,8 @@ set(MEM_ANALYSIS_PLUGIN_NAME  "MemAnalysis64")
 set ( PLUGIN_LIB "${DEFAULT_PLUGIN_NAME}" )
 
 set ( DEFAULT_PLUGIN_SRC
-  ${LIB_DIR}/memory_heatmap.cc
-  ${LIB_DIR}/time_interval_handler.cc
+  ${LIB_DIR}/memory_heatmap_wrapper.cc
+  ${LIB_DIR}/time_interval_handler_wrapper.cc
   ${PLUGIN_DIR}/plugin.cc
 )
 
