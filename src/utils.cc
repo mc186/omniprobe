@@ -474,7 +474,31 @@ uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::str
 
 uint64_t coCache::findInstrumentedAlternative(hsa_executable_symbol_t symbol, const std::string& name, hsa_agent_t queue_agent)
 {
-    return findAlternative(symbol, getInstrumentedName(std::string(name)), queue_agent);
+    uint64_t result = 0;
+    {
+        lock_guard<std::mutex> lock(mutex);
+        auto it = alternatives_.find(queue_agent);
+        if (it != alternatives_.end())
+        {
+            auto sit = it->second.find(symbol);
+            if (sit != it->second.end())
+            {
+                result = sit->second;
+            }
+        }
+        else
+            alternatives_[queue_agent] = {};
+    }
+    if (!result)
+    {
+        result = findAlternative(symbol, getInstrumentedName(std::string(name)), queue_agent);
+        if (result)
+        {
+            lock_guard<std::mutex> lock(mutex);
+            alternatives_[queue_agent][symbol] = result;
+        }
+    }
+    return result;
 }
 
 

@@ -170,6 +170,7 @@ private:
     std::mutex mutex_;
     std::string location_;
     std::map<hsa_agent_t, cache_object_t, hsa_cmp<hsa_agent_t>> cache_objects_;
+    std::map<hsa_agent_t, std::map<hsa_executable_symbol_t, uint64_t, hsa_cmp<hsa_executable_symbol_t>>, hsa_cmp<hsa_agent_t>> alternatives_;
     std::map<uint64_t, uint32_t> kernarg_sizes_;
 };
 

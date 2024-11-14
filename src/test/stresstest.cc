@@ -63,7 +63,7 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
         //    #pragma unroll
             for (int i = 0; i < n; ++i)
             {
-                dh_comms::v_submit_address(rsrc, x + idx, __LINE__, 0b01, 0x01, sizeof(x[0]));
+                dh_comms::v_submit_address(rsrc, x + idx, __LINE__, 0b01, 0b01, sizeof(x[0]));
                 x[idx] += i * m;
             }
         }
