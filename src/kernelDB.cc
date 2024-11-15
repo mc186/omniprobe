@@ -21,8 +21,56 @@ THE SOFTWARE.
 *******************************************************************************/
 
 #include "inc/kernelDB.h"
+#define FATBIN_SECTION ".hip_fatbin"
+
+#define CHECK_COMGR(call)                                                                          \
+  if (amd_comgr_status_s status = call) {                                                          \
+    const char* reason = "";                                                                       \
+    amd_comgr_status_string(status, &reason);                                                      \
+    std::cerr << __LINE__ << " code: " << status << std::endl;                                     \
+    std::cerr << __LINE__ << " failed: " << reason << std::endl;                                   \
+    exit(1);                                                                                       \
+  }
+
 
 namespace kernelDB {
+
+std::string getExecutablePath() {
+    char result[PATH_MAX];
+    ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+    return std::string(result, (count > 0) ? count : 0);
+}
+
+std::vector<std::string> getIsaList(hsa_agent_t agent)
+{
+    std::vector<std::string> list;
+    hsa_agent_iterate_isas(agent,[](hsa_isa_t isa, void *data){
+        std::vector<std::string> *pList = reinterpret_cast<std::vector<std::string> *> (data);
+           uint32_t length;
+           hsa_status_t status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME_LENGTH, 0, &length);
+           if (status == HSA_STATUS_SUCCESS)
+           {
+                char *pName = static_cast<char *>(malloc(length + 1));
+                if (pName)
+                {
+                    pName[length] = '\0';
+                    status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME, 0, pName);
+                    //std::cerr << "Isa name: " << pName << std::endl;
+                    if (status == HSA_STATUS_SUCCESS)
+                        pList->push_back(std::string(pName));
+                    free(pName);
+                }
+                else
+                {
+                    std::cout << "The system is somehow out of memory at line " << __LINE__ << " so I'm aborting this run." << std::endl;
+                    abort();
+                }
+           }
+           return HSA_STATUS_SUCCESS;
+        }, reinterpret_cast<void *>(&list));   
+    return list;
+}
+
 
 kernelDB::kernelDB(hsa_agent_t agent, const std::string& fileName)
 {
@@ -39,6 +87,108 @@ kernelDB::~kernelDB()
 bool kernelDB::getBasicBlocks(const std::string& kernel, std::vector<basicBlock_t>&)
 {
     return true;
+}
+
+bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter)
+{
+    bool bReturn = true;
+    amd_comgr_data_t executable;
+    if (name.ends_with(".hsaco"))
+    {
+        amd_comgr_data_t executable;
+        std::vector<char> buff;
+        std::ifstream file(name, std::ios::binary | std::ios::ate);
+
+        if (!file.is_open()) {
+            std::cerr << "Failed to open the file: " << name << std::endl;
+        }
+
+        std::streamsize fileSize = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        // Resize the buffer to fit the file content
+        buff.resize(fileSize);
+
+        // Read the file content into the buffer
+        if (!file.read(buff.data(), fileSize)) {
+            std::cerr << "Failed to read the file content" << std::endl;
+        }
+        file.close();
+        CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &executable));
+        CHECK_COMGR(amd_comgr_set_data(executable, buff.size(), buff.data()));
+    }
+    else
+    {
+        amd_comgr_data_t bundle;
+        std::vector<uint8_t> bits;
+        std::vector<std::string> isas = ::kernelDB::getIsaList(agent);
+        getElfSectionBits(name, FATBIN_SECTION, bits);
+        CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_FATBIN, &bundle));
+        CHECK_COMGR(amd_comgr_set_data(bundle, bits.size(), reinterpret_cast<const char *>(bits.data())));
+        if (isas.size())
+        {
+            std::vector<amd_comgr_code_object_info_t> ql;
+            for (int i = 0; i < isas.size(); i++)
+                ql.push_back({isas[i].c_str(),0,0});
+            CHECK_COMGR(amd_comgr_lookup_code_object(bundle,static_cast<amd_comgr_code_object_info_t *>(ql.data()), ql.size()));
+            for (auto co : ql)
+            {
+                /* Use the first code object that is ISA-compatible with this agent */
+                if (co.size != 0)
+                {
+                    CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &executable));
+                    CHECK_COMGR(amd_comgr_set_data(executable, co.size, reinterpret_cast<const char *>(bits.data() + co.offset)));
+                    break;
+                }
+            }   
+        }
+        CHECK_COMGR(amd_comgr_release_data(bundle));
+    }
+    return bReturn;
+}
+
+void kernelDB::getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData ) {
+    std::ifstream file(fileName, std::ios::binary);
+    if (!file) {
+        throw std::runtime_error("Could not open file: " + fileName);
+    }
+
+    // Read ELF header
+    Elf64_Ehdr elfHeader;
+    file.read(reinterpret_cast<char*>(&elfHeader), sizeof(elfHeader));
+
+    // Check if it's an ELF file
+    if (memcmp(elfHeader.e_ident, ELFMAG, SELFMAG) != 0) {
+        throw std::runtime_error("Not a valid ELF file");
+    }
+
+    // Seek to the section header table
+    file.seekg(elfHeader.e_shoff, std::ios::beg);
+
+    // Read all section headers
+    std::vector<Elf64_Shdr> sectionHeaders(elfHeader.e_shnum);
+    file.read(reinterpret_cast<char*>(sectionHeaders.data()), elfHeader.e_shnum * sizeof(Elf64_Shdr));
+
+    // Seek to the section header string table
+    const Elf64_Shdr &shstrtab = sectionHeaders[elfHeader.e_shstrndx];
+    std::vector<char> shstrtabData(shstrtab.sh_size);
+    file.seekg(shstrtab.sh_offset, std::ios::beg);
+    file.read(shstrtabData.data(), shstrtab.sh_size);
+
+    // Find the section by name
+    for (const auto &section : sectionHeaders) {
+        std::string currentSectionName(&shstrtabData[section.sh_name]);
+
+        if (currentSectionName == sectionName) {
+            // Read the section data
+            sectionData.resize(section.sh_size);
+            file.seekg(section.sh_offset, std::ios::beg);
+            file.read(reinterpret_cast<char*>(sectionData.data()), section.sh_size);
+            return;  // Return the section bits
+        }
+    }
+
+    throw std::runtime_error("Section not found: " + sectionName);
 }
 
 }//kernelDB

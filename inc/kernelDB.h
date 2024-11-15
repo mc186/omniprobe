@@ -39,6 +39,8 @@ public:
     kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits);
     ~kernelDB();
     bool getBasicBlocks(const std::string& name, std::vector<basicBlock_t>&);
+    bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);
+    static void getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData );
 private:
     std::map<std::string, kernel_t> kernels_;
     amd_comgr_data_t executable_;
