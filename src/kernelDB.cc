@@ -19,27 +19,26 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 *******************************************************************************/
-#pragma once
-#include "utils.h"
 
-typedef struct basicBlock_s {
-    std::string disassembly_;
-    std::map<std::string, uint64_t> counts_;
-}basicBlock_t;
+#include "inc/kernelDB.h"
 
-typedef struct kernel_s {
-    std::string name_;
-    std::string disassembly_;
-    std::vector<basicBlock_t> blocks_;
-}kernel_t;
+namespace kernelDB {
 
-class codeUtils {
-public:
-    codeUtils(hsa_agent_t agent, const std::string& fileName);
-    codeUtils(hsa_agent_t agent, std::vector<uint8_t> bits);
-    ~codeUtils();
-    bool getBasicBlocks(const std::string& name, std::vector<basicBlock_t>&);
-private:
-    std::map<std::string, kernel_t> kernels_;
-    amd_comgr_data_t executable_;
-};
+kernelDB::kernelDB(hsa_agent_t agent, const std::string& fileName)
+{
+}
+
+kernelDB::kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits)
+{
+}
+
+kernelDB::~kernelDB()
+{
+}
+
+bool kernelDB::getBasicBlocks(const std::string& kernel, std::vector<basicBlock_t>&)
+{
+    return true;
+}
+
+}//kernelDB
