@@ -128,11 +128,20 @@ std::vector<std::string> getIsaList(hsa_agent_t agent)
            if (status == HSA_STATUS_SUCCESS)
            {
                 char *pName = static_cast<char *>(malloc(length + 1));
-                pName[length] = '\0';
-                status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME, 0, pName);
-                //std::cerr << "Isa name: " << pName << std::endl;
-                if (status == HSA_STATUS_SUCCESS)
-                    pList->push_back(std::string(pName));
+                if (pName)
+                {
+                    pName[length] = '\0';
+                    status = hsa_isa_get_info(isa, HSA_ISA_INFO_NAME, 0, pName);
+                    //std::cerr << "Isa name: " << pName << std::endl;
+                    if (status == HSA_STATUS_SUCCESS)
+                        pList->push_back(std::string(pName));
+                    free(pName);
+                }
+                else
+                {
+                    std::cout << "The system is somehow out of memory at line " << __LINE__ << " so I'm aborting this run." << std::endl;
+                    abort();
+                }
            }
            return HSA_STATUS_SUCCESS;
         }, reinterpret_cast<void *>(&list));   
