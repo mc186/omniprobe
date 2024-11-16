@@ -93,6 +93,7 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
 {
     bool bReturn = true;
     amd_comgr_data_t executable;
+    std::vector<std::string> isas = ::kernelDB::getIsaList(agent);
     if (name.ends_with(".hsaco"))
     {
         amd_comgr_data_t executable;
@@ -121,7 +122,6 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
     {
         amd_comgr_data_t bundle;
         std::vector<uint8_t> bits;
-        std::vector<std::string> isas = ::kernelDB::getIsaList(agent);
         getElfSectionBits(name, FATBIN_SECTION, bits);
         CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_FATBIN, &bundle));
         CHECK_COMGR(amd_comgr_set_data(bundle, bits.size(), reinterpret_cast<const char *>(bits.data())));
@@ -143,6 +143,34 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
             }   
         }
         CHECK_COMGR(amd_comgr_release_data(bundle));
+    }
+    if(isas.size())
+    {
+        amd_comgr_data_set_t dataSetIn, dataSetOut;
+        amd_comgr_data_t dataOutput;
+        amd_comgr_action_info_t dataAction;
+        CHECK_COMGR(amd_comgr_create_data_set(&dataSetIn));
+        CHECK_COMGR(amd_comgr_data_set_add(dataSetIn, executable));
+        CHECK_COMGR(amd_comgr_create_data_set(&dataSetOut));
+        CHECK_COMGR(amd_comgr_create_action_info(&dataAction));
+        CHECK_COMGR(amd_comgr_action_info_set_isa_name(dataAction,isas[0].c_str()));
+    	CHECK_COMGR(amd_comgr_do_action(AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE,
+                            dataAction, dataSetIn, dataSetOut));
+		CHECK_COMGR(amd_comgr_destroy_data_set(dataSetIn));
+		size_t count,size;
+        
+		CHECK_COMGR(amd_comgr_action_data_count(dataSetOut, AMD_COMGR_DATA_KIND_SOURCE, &count));
+		CHECK_COMGR(amd_comgr_action_data_get_data(dataSetOut, AMD_COMGR_DATA_KIND_SOURCE, 0, &dataOutput));
+		CHECK_COMGR(amd_comgr_get_data(dataOutput, &size, NULL));
+		
+        char *bytes = (char *)malloc(size+1);
+        bytes[size] = '\0';
+		CHECK_COMGR(amd_comgr_get_data(dataOutput, &size, bytes));
+        std::string strDisassembly(bytes);
+        free(bytes);
+        CHECK_COMGR(amd_comgr_destroy_data_set(dataSetIn));
+        CHECK_COMGR(amd_comgr_release_data(dataOutput));
+        CHECK_COMGR(amd_comgr_release_data(executable));
     }
     return bReturn;
 }
