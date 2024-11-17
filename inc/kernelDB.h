@@ -33,7 +33,7 @@ typedef struct kernel_s {
     std::vector<basicBlock_t> blocks_;
 }kernel_t;
 
-class kernelDB {
+class __attribute__((visibility("default"))) kernelDB {
 public:
     kernelDB(hsa_agent_t agent, const std::string& fileName);
     kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits);
@@ -44,6 +44,8 @@ public:
 private:
     std::map<std::string, kernel_t> kernels_;
     amd_comgr_data_t executable_;
+    hsa_agent_t agent_;
+    std::string fileName_;
 };
 
 

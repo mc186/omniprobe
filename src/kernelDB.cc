@@ -74,6 +74,10 @@ std::vector<std::string> getIsaList(hsa_agent_t agent)
 
 kernelDB::kernelDB(hsa_agent_t agent, const std::string& fileName)
 {
+    agent_ = agent;
+    fileName_ = fileName;
+    std::string empty("");
+    addFile(fileName, agent, empty);
 }
 
 kernelDB::kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits)
@@ -82,6 +86,7 @@ kernelDB::kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits)
 
 kernelDB::~kernelDB()
 {
+   std::cout << "Ending kernelDB\n"; 
 }
 
 bool kernelDB::getBasicBlocks(const std::string& kernel, std::vector<basicBlock_t>&)
@@ -150,6 +155,7 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
         amd_comgr_data_t dataOutput;
         amd_comgr_action_info_t dataAction;
         CHECK_COMGR(amd_comgr_create_data_set(&dataSetIn));
+        CHECK_COMGR(amd_comgr_set_data_name(executable, "RB_DATAIN"));
         CHECK_COMGR(amd_comgr_data_set_add(dataSetIn, executable));
         CHECK_COMGR(amd_comgr_create_data_set(&dataSetOut));
         CHECK_COMGR(amd_comgr_create_action_info(&dataAction));
@@ -168,9 +174,10 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
 		CHECK_COMGR(amd_comgr_get_data(dataOutput, &size, bytes));
         std::string strDisassembly(bytes);
         free(bytes);
-        CHECK_COMGR(amd_comgr_destroy_data_set(dataSetIn));
+        //CHECK_COMGR(amd_comgr_destroy_data_set(dataSetIn));
         CHECK_COMGR(amd_comgr_release_data(dataOutput));
         CHECK_COMGR(amd_comgr_release_data(executable));
+        std::cout << strDisassembly << std::endl;
     }
     return bReturn;
 }
