@@ -101,7 +101,6 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
     std::vector<std::string> isas = ::kernelDB::getIsaList(agent);
     if (name.ends_with(".hsaco"))
     {
-        amd_comgr_data_t executable;
         std::vector<char> buff;
         std::ifstream file(name, std::ios::binary | std::ios::ate);
 
