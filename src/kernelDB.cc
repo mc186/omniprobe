@@ -20,6 +20,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 *******************************************************************************/
 
+#include <iostream>
+#include <sstream>
 #include "inc/kernelDB.h"
 #define FATBIN_SECTION ".hip_fatbin"
 
@@ -177,6 +179,45 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
         CHECK_COMGR(amd_comgr_release_data(dataOutput));
         CHECK_COMGR(amd_comgr_release_data(executable));
         std::cout << strDisassembly << std::endl;
+        parseDisassembly(strDisassembly);
+    }
+    return bReturn;
+}
+
+bool kernelDB::parseDisassembly(const std::string& text)
+{
+    bool bReturn = true;
+    std::istringstream in(text);
+    std::string line;
+    parse_mode mode = BEGIN;
+    std::string strKernel;
+    while(std::getline(in,line))
+    {
+        auto it = line.begin();
+        switch(mode)
+        {
+            case BEGIN:
+                if (*it == ':')
+                    mode = KERNEL;
+                break;
+            case KERNEL:
+                it = --(line.end());
+                if (*it == ':')
+                {
+                    if (line.find_first_of(" ") == std::string::npos)
+                    {
+                        strKernel = line.substr(0, line.length() - 1);
+                        mode=BBLOCK;
+                    }
+                }
+                break;
+            case BBLOCK:
+                break;
+            case INSTRUCTION:
+                break;
+            default:
+                break;
+        }
     }
     return bReturn;
 }

@@ -40,6 +40,7 @@ public:
     ~kernelDB();
     bool getBasicBlocks(const std::string& name, std::vector<basicBlock_t>&);
     bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);
+    bool parseDisassembly(const std::string& text);
     static void getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData );
 private:
     std::map<std::string, kernel_t> kernels_;
@@ -48,5 +49,11 @@ private:
     std::string fileName_;
 };
 
+enum parse_mode {
+    BEGIN,
+    KERNEL,
+    BBLOCK,
+    INSTRUCTION
+};
 
 }//kernelDB
