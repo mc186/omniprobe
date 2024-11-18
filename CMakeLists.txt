@@ -116,6 +116,34 @@ endif()
 set(LIB_VERSION_STRING "${LIB_VERSION_MAJOR}.${LIB_VERSION_MINOR}.${LIB_VERSION_PATCH}")
 message("-- LIB-VERSION STRING: ${LIB_VERSION_STRING}")
 
+# Build subprojects
+include(fetch)
+
+fetch_project(
+    NAME dh_comms
+    GIT_REPOSITORY git@github.com:AARInternal/dh_comms.git
+    GIT_TAG main
+    INCLUDE_DIRS
+)
+
+if(DEFINED ENV{ROCM_LLVM})
+    set(LLVM_INSTALL_DIR $ENV{ROCM_LLVM})
+elseif(DEFINED ENV{WORK})
+    set(LLVM_INSTALL_DIR $ENV{WORK}/.local)
+else()
+    message(FATAL_ERROR "LLVM_INSTALL not defined")
+endif()
+message(STATUS "LLVM_INSTALL: ${LLVM_INSTALL_DIR}")
+
+fetch_project(
+    NAME instrument-kernels
+    GIT_REPOSITORY git@github.com:coleramos425/instrument-amdgpu-kernels.git
+    GIT_TAG main
+    CMAKE_ARGS 
+        -DCMAKE_C_COMPILER=${ROCM_PATH}/bin/amdclang
+        -DCMAKE_CXX_COMPILER=${ROCM_PATH}/bin/amdclang++
+)
+
 # Set target and root/lib/test directory
 set(TARGET_NAME "${INTERCEPTOR_TARGET}")
 set(DEFAULT_PLUGIN_NAME "defaultMessageHandlers64")
@@ -190,16 +218,3 @@ set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/RPM/rpm_post
 set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/RPM/rpm_postun")
 
 include(CPack)
-
-include(ExternalProject)
-
-ExternalProject_Add(
-    dh_comms
-    GIT_REPOSITORY https://github.com/AARInternal/dh_comms.git
-    GIT_TAG  main
-    PREFIX ${CMAKE_BINARY_DIR}/dh_comms
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=~/.local
-)
-
-# Add dependency to your target
-add_dependencies(${INTERCEPTOR_TARGET} dh_comms)
