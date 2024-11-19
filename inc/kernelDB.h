@@ -42,25 +42,34 @@ enum parse_mode {
 };
 
 
-typedef struct basicBlock_s {
+class basicBlock {
+public: 
+    basicBlock(uint16_t id);
+    ~basicBlock() = default;
+    void addInstruction(const instruction_t& instruction);
+private:
     uint16_t block_id;
     std::string disassembly_;
     std::vector<instruction_t> instructions_;
     std::map<std::string, uint64_t> counts_;
-}basicBlock_t;
+};
 
-typedef struct kernel_s {
+class CDNAKernel {
+public:
+    CDNAKernel(const std::string& name, const std::string& disassembly);
+    ~CDNAKernel() = default;
+private:
     std::string name_;
     std::string disassembly_;
-    std::vector<basicBlock_t> blocks_;
-}kernel_t;
+    std::vector<basicBlock> blocks_;
+};
 
 class __attribute__((visibility("default"))) kernelDB {
 public:
     kernelDB(hsa_agent_t agent, const std::string& fileName);
     kernelDB(hsa_agent_t agent, std::vector<uint8_t> bits);
     ~kernelDB();
-    bool getBasicBlocks(const std::string& name, std::vector<basicBlock_t>&);
+    bool getBasicBlocks(const std::string& name, std::vector<basicBlock>&);
     bool addFile(const std::string& name, hsa_agent_t agent, const std::string& strFilter);
     bool parseDisassembly(const std::string& text);
     static void getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData );
@@ -68,7 +77,7 @@ private:
     parse_mode getLineType(std::string& line);
     static bool isBranch(const std::string& instruction);
 private:
-    std::map<std::string, kernel_t> kernels_;
+    std::map<std::string, CDNAKernel> kernels_;
     amd_comgr_data_t executable_;
     hsa_agent_t agent_;
     std::string fileName_;

@@ -100,7 +100,7 @@ kernelDB::~kernelDB()
    std::cout << "Ending kernelDB\n"; 
 }
 
-bool kernelDB::getBasicBlocks(const std::string& kernel, std::vector<basicBlock_t>&)
+bool kernelDB::getBasicBlocks(const std::string& kernel, std::vector<basicBlock>&)
 {
     return true;
 }
@@ -244,6 +244,8 @@ bool kernelDB::parseDisassembly(const std::string& text)
                 if (tokens.size())
                 {
                     trim(tokens[0]);
+                    if (isBranch(tokens[0]))
+                        block_count++;
                     std::vector<std::string> inst_tokens;
                     split(tokens[0], inst_tokens, "_", false);
                     if (inst_tokens.size() > 2 && (inst_tokens[1] == "load" || inst_tokens[1] == "store"))
