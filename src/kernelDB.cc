@@ -37,6 +37,10 @@ THE SOFTWARE.
 
 namespace kernelDB {
 
+
+static std::unordered_set<std::string> branch_instructions = {"s_branch", "s_cbranch_scc0", "s_cbranch_scc1", "s_cbranch_vccz", "s_cbranch_vccnz", "s_cbranch_execz", "s_cbranch_execnz",
+    "s_setpc_b64", "s_call_b64","s_return_b64"};
+
 std::string getExecutablePath() {
     char result[PATH_MAX];
     ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
@@ -71,6 +75,11 @@ std::vector<std::string> getIsaList(hsa_agent_t agent)
            return HSA_STATUS_SUCCESS;
         }, reinterpret_cast<void *>(&list));   
     return list;
+}
+    
+bool kernelDB::isBranch(const std::string& instruction)
+{
+    return branch_instructions.find(instruction) != branch_instructions.end();
 }
 
 

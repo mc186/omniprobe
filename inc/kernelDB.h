@@ -21,7 +21,18 @@ THE SOFTWARE.
 *******************************************************************************/
 #pragma once
 #include "utils.h"
+#include <unordered_set>
 namespace kernelDB {
+
+typedef struct instruction_s{
+    std::string prefix_;
+    std::string type_;
+    std::string size_;
+    std::string inst_;
+    std::vector<std::string> operands_;
+    std::string disassembly_;
+}instruction_t;
+
 
 enum parse_mode {
     BEGIN,
@@ -30,8 +41,11 @@ enum parse_mode {
     BRANCH
 };
 
+
 typedef struct basicBlock_s {
+    uint16_t block_id;
     std::string disassembly_;
+    std::vector<instruction_t> instructions_;
     std::map<std::string, uint64_t> counts_;
 }basicBlock_t;
 
@@ -52,6 +66,7 @@ public:
     static void getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData );
 private:
     parse_mode getLineType(std::string& line);
+    static bool isBranch(const std::string& instruction);
 private:
     std::map<std::string, kernel_t> kernels_;
     amd_comgr_data_t executable_;
