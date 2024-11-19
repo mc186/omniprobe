@@ -178,10 +178,31 @@ bool kernelDB::addFile(const std::string& name, hsa_agent_t agent, const std::st
         //CHECK_COMGR(amd_comgr_destroy_data_set(dataSetIn));
         CHECK_COMGR(amd_comgr_release_data(dataOutput));
         CHECK_COMGR(amd_comgr_release_data(executable));
-        std::cout << strDisassembly << std::endl;
+        //std::cout << strDisassembly << std::endl;
         parseDisassembly(strDisassembly);
     }
     return bReturn;
+}
+
+parse_mode kernelDB::getLineType(std::string& line)
+{
+    parse_mode result = BBLOCK;
+    auto it = line.begin();
+    if (*it == ':')
+        result = BEGIN;
+    else
+    {
+        it = --(line.end());
+        if (*it == ':')
+        {
+            // It's only a valid kernel if there are no spaces in lines that end with ':'
+            if(line.find_first_of(" ") == std::string::npos)
+            {
+                result = KERNEL;
+            }
+        }
+    }
+    return result;
 }
 
 bool kernelDB::parseDisassembly(const std::string& text)
@@ -191,29 +212,42 @@ bool kernelDB::parseDisassembly(const std::string& text)
     std::string line;
     parse_mode mode = BEGIN;
     std::string strKernel;
+    uint16_t block_count = 0;
     while(std::getline(in,line))
     {
-        auto it = line.begin();
+        std::vector<std::string> tokens;
+        mode = getLineType(line);
         switch(mode)
         {
             case BEGIN:
-                if (*it == ':')
-                    mode = KERNEL;
+                mode = KERNEL;
+                if (block_count)
+                    std::cout << std::dec << block_count << " blocks in " << strKernel << std::endl;
+                block_count = 0;
                 break;
             case KERNEL:
-                it = --(line.end());
-                if (*it == ':')
+                strKernel = line.substr(0, line.length() - 1);
+                mode=BBLOCK;
+                block_count++;
+                break;
+            case BBLOCK:
+                split(line, tokens, " ", false);
+                if (tokens.size())
                 {
-                    if (line.find_first_of(" ") == std::string::npos)
+                    trim(tokens[0]);
+                    std::vector<std::string> inst_tokens;
+                    split(tokens[0], inst_tokens, "_", false);
+                    if (inst_tokens.size() > 2 && (inst_tokens[1] == "load" || inst_tokens[1] == "store"))
                     {
-                        strKernel = line.substr(0, line.length() - 1);
-                        mode=BBLOCK;
+                        std::cout << "Prefix: " << inst_tokens[0] << std::endl;
+                        std::cout << "\tType: " << inst_tokens[1] << std::endl;
+                        std::cout << "\tSize: " << inst_tokens[2] << std::endl;
+                        std::cout << "\tSuffix: " << inst_tokens[2] << std::endl;
                     }
                 }
                 break;
-            case BBLOCK:
-                break;
-            case INSTRUCTION:
+            case BRANCH:
+                block_count++;
                 break;
             default:
                 break;

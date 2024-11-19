@@ -22,6 +22,14 @@ THE SOFTWARE.
 #pragma once
 #include "utils.h"
 namespace kernelDB {
+
+enum parse_mode {
+    BEGIN,
+    KERNEL,
+    BBLOCK,
+    BRANCH
+};
+
 typedef struct basicBlock_s {
     std::string disassembly_;
     std::map<std::string, uint64_t> counts_;
@@ -43,17 +51,13 @@ public:
     bool parseDisassembly(const std::string& text);
     static void getElfSectionBits(const std::string &fileName, const std::string &sectionName, std::vector<uint8_t>& sectionData );
 private:
+    parse_mode getLineType(std::string& line);
+private:
     std::map<std::string, kernel_t> kernels_;
     amd_comgr_data_t executable_;
     hsa_agent_t agent_;
     std::string fileName_;
 };
 
-enum parse_mode {
-    BEGIN,
-    KERNEL,
-    BBLOCK,
-    INSTRUCTION
-};
 
 }//kernelDB
