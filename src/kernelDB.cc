@@ -222,6 +222,7 @@ bool kernelDB::parseDisassembly(const std::string& text)
     parse_mode mode = BEGIN;
     std::string strKernel;
     uint16_t block_count = 0;
+    basicBlock block;
     while(std::getline(in,line))
     {
         std::vector<std::string> tokens;
@@ -247,13 +248,17 @@ bool kernelDB::parseDisassembly(const std::string& text)
                     if (isBranch(tokens[0]))
                         block_count++;
                     std::vector<std::string> inst_tokens;
+                    instruction_t inst;
                     split(tokens[0], inst_tokens, "_", false);
                     if (inst_tokens.size() > 2 && (inst_tokens[1] == "load" || inst_tokens[1] == "store"))
                     {
-                        std::cout << "Prefix: " << inst_tokens[0] << std::endl;
-                        std::cout << "\tType: " << inst_tokens[1] << std::endl;
-                        std::cout << "\tSize: " << inst_tokens[2] << std::endl;
-                        std::cout << "\tSuffix: " << inst_tokens[2] << std::endl;
+                        inst.prefix_ = inst_tokens[0];
+                        inst.type_ = inst_tokens[1];
+                        inst.size_ = inst_tokens[2];
+                        inst.disassembly_ = line;
+                        for (size_t i = 3; i < inst_tokens.size(); i++)
+                            inst.operands_.push_back(inst_tokens[i]);
+                        block.addInstruction(inst);
                     }
                 }
                 break;
@@ -309,6 +314,31 @@ void kernelDB::getElfSectionBits(const std::string &fileName, const std::string 
     }
 
     throw std::runtime_error("Section not found: " + sectionName);
+}
+
+basicBlock::basicBlock()
+{
+}
+
+void basicBlock::addInstruction(const instruction_t& instruction)
+{
+   instructions_.push_back(instruction);
+   if (counts_.find(instruction.inst_) != counts_.end())
+        counts_[instruction.inst_]++;
+   else
+        counts_[instruction.inst_] = 1;
+}
+
+CDNAKernel::CDNAKernel(const std::string& name, const std::string& disassembly)
+{
+    name_ = name;
+    disassembly_ = disassembly;
+}
+
+size_t CDNAKernel::addBlock(const basicBlock& block)
+{
+    blocks_.push_back(block);
+    return blocks_.size();
 }
 
 }//kernelDB

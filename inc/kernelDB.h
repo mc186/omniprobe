@@ -42,9 +42,9 @@ enum parse_mode {
 };
 
 
-class basicBlock {
+class __attribute__((visibility("default"))) basicBlock {
 public: 
-    basicBlock(uint16_t id);
+    basicBlock();
     ~basicBlock() = default;
     void addInstruction(const instruction_t& instruction);
 private:
@@ -54,10 +54,12 @@ private:
     std::map<std::string, uint64_t> counts_;
 };
 
-class CDNAKernel {
+class __attribute__((visibility("default"))) CDNAKernel {
 public:
     CDNAKernel(const std::string& name, const std::string& disassembly);
     ~CDNAKernel() = default;
+    size_t addBlock(const basicBlock& block);
+    size_t getBlockCount() { return blocks_.size();}
 private:
     std::string name_;
     std::string disassembly_;
