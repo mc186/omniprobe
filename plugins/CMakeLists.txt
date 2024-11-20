@@ -92,7 +92,7 @@ target_link_libraries(
     c
     stdc++
     stdc++fs
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
 )
 
 target_link_libraries(
@@ -102,7 +102,7 @@ target_link_libraries(
     c
     stdc++
     stdc++fs
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
 )
 
 target_link_libraries(
@@ -112,7 +112,7 @@ target_link_libraries(
     c
     stdc++
     stdc++fs
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
 )
 
 

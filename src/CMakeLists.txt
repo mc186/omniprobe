@@ -116,7 +116,7 @@ target_link_libraries(
     c
     stdc++
     stdc++fs
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
     amd_comgr
 )
 
@@ -130,7 +130,7 @@ target_link_libraries(
     ${STRESSTEST_NAME}
   PRIVATE
     ${ROCM_PATH}/lib/libhiprtc.so
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
 )
 
 target_include_directories (
@@ -157,7 +157,7 @@ target_link_libraries(
     ${HEATMAP_EXAMPLE}
   PRIVATE
     ${ROCM_PATH}/lib/libhiprtc.so
-    dh_comms
+    ${dh_comms_LOCATION}/build/lib/libdh_comms.so
 )
 
 target_include_directories (
