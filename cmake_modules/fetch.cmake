@@ -2,7 +2,7 @@ include(FetchContent)
 
 function(fetch_project)
   cmake_parse_arguments(FETCH_SOURCE
-    "INCLUDE_DIRS;BUILD_NOW"   # options
+    "INCLUDE_DIRS;EXCLUDE_EXAMPLES"   # options
     "NAME;GIT_REPOSITORY;GIT_TAG" # single-arg options
     ""             # multi-arg options
     ${ARGN}
@@ -18,6 +18,11 @@ function(fetch_project)
 #     ${FETCH_SOURCE_MD5_COMMAND}
 #     SOURCE_DIR ${SOURCE}
 #   )
+
+  if(FETCH_SOURCE_EXCLUDE_EXAMPLES)
+    set(FETCH_SOURCE_EXCLUDE_EXAMPLES ${SOURCE}/examples)
+    message(STATUS "Excluding examples from ${FETCH_SOURCE_EXCLUDE_EXAMPLES}")
+  endif()
 
   FetchContent_Declare(${FETCH_SOURCE_NAME}
     GIT_REPOSITORY ${FETCH_SOURCE_GIT_REPOSITORY}
