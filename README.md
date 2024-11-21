@@ -32,7 +32,9 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
 - LOGDUR_INSTRUMENTED
   - Value can be either "true" or "false". If set to "true", the kernel cache with replace dispatched kernels with an instrumented alternative.
 ## Building  
-```
+This project now depends on the [dh_comms](https://github.com/AARInternal/dh_comms) library and the [instrument-amdgpu-kernels](https://github.com/CRobeck/instrument-amdgpu-kernels) tool. By default, both of these dependencies will be pulled into this project via CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module.
+
+```shell
   git clone https://github.com/AARInternal/logduration.git
   cd logduration
   mkdir build
@@ -40,10 +42,6 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
   cmake ..
   make
 ```
-This project now depends on the dh_comms library which can be found here: https://github.com/AARInternal/dh_comms
-The cmake file(s) will search for this library. If it can't find them it will issue warnings but will not fail.
-If dh_comms is not installed in the normal locations (e.g. /usr/local/ or $HOME/.local) this you can get logduration to build
-by running cmake like this:
-```
-cmake -DCMAKE_LIBRARY_PATH=<path to dh_comm library> -DCMAKE_INCLUDE_PATH=<path to dh_comms include files>
-```
+
+> [!TIP]
+> Add the `-DCMAKE_INSTALL_PREFIX` flag to your CMake command to install to a standard location on your system. Don't forget to use `make install`.
