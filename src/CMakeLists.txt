@@ -47,7 +47,6 @@ find_package(Python COMPONENTS Development)
 
 set(DH_COMMS_INCLUDE ${dh_comms_LOCATION}/source/include)
 
-
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 function(generate_hsaco TARGET_ID INPUT_FILE OUTPUT_FILE)
@@ -95,7 +94,7 @@ add_custom_target(hsaco_targets DEPENDS ${HSACO_TARGET_LIST})
 
 link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64)
 add_library ( ${TARGET_LIB} SHARED ${LIB_SRC})
-add_dependencies(${TARGET_LIB} hsaco_targets)
+add_dependencies(${TARGET_LIB} hsaco_targets dh_comms)
 
 target_include_directories (
     ${TARGET_LIB}
@@ -125,6 +124,7 @@ add_executable(${STRESSTEST_NAME} ${TEST_SRC})
 set_source_files_properties(${TEST_SRC} PROPERTIES LANGUAGE HIP)
 
 target_compile_options(${STRESSTEST_NAME} PRIVATE -fgpu-rdc  -Werror -Wall -Wextra)
+add_dependencies(${STRESSTEST_NAME} dh_comms)
 
 target_link_libraries(
     ${STRESSTEST_NAME}
@@ -153,6 +153,8 @@ set_source_files_properties(${HEATMAP_SRC} PROPERTIES LANGUAGE HIP)
 
 target_compile_options(${HEATMAP_EXAMPLE} PRIVATE -fgpu-rdc  -Werror -Wall -Wextra)
 
+add_dependencies(${HEATMAP_EXAMPLE} dh_comms)
+
 target_link_libraries(
     ${HEATMAP_EXAMPLE}
   PRIVATE
@@ -173,6 +175,4 @@ target_link_options (
   PRIVATE
     -fgpu-rdc
 )
-
-
 
