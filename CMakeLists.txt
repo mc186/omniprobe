@@ -145,7 +145,7 @@ message(STATUS "LLVM_INSTALL: ${LLVM_INSTALL_DIR}")
 
 fetch_project(
     NAME instrument-kernels
-    GIT_REPOSITORY git@github.com:coleramos425/instrument-amdgpu-kernels.git
+    GIT_REPOSITORY git@github.com:CRobeck/instrument-amdgpu-kernels.git
     GIT_TAG main
     CMAKE_ARGS 
         -DCMAKE_C_COMPILER=${ROCM_PATH}/llvm/bin/clang
