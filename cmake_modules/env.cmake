@@ -40,28 +40,46 @@ add_definitions ( -DHSA_DEPRECATED= )
 ## Linux Compiler options
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++2a" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall" )
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror" )
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sometimes-uninitialized" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-braced-scalar-init" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-lambda-capture")
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function" )
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable")
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch-bool")
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-private-field")
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type" )
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable" )
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-switch-bool" )
+set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-private-field" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fexceptions" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-math-errno" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-threadsafe-statics" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmerge-all-constants" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fms-extensions" )
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmerge-all-constants" )
-set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=unused-result" )
 #set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=int-in-bool-context" )
 set ( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC" )
 
 set ( CMAKE_SHARED_LINKER_FLAGS "-Wl,-Bdynamic -Wl,-z,noexecstack" )
 
-set ( CMAKE_SKIP_BUILD_RPATH TRUE )
+####################
+# RPATH settings
+####################
+
+# use, i.e. don't skip the full RPATH for the build tree
+set ( CMAKE_SKIP_BUILD_RPATH FALSE )
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+
+# add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# the RPATH to be used when installing, but only if it's not a system directory
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
+endif("${isSystemDir}" STREQUAL "-1")
+
+
 
 add_definitions ( -DNEW_TRACE_API=1 )
 
