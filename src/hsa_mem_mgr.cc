@@ -29,14 +29,14 @@ hsa_mem_mgr::hsa_mem_mgr(hsa_agent_t agent, const pool_specs_t& pool, const Kern
     uint32_t length = sizeof(name);
     hsa_agent_get_info(pool.agent_, HSA_AGENT_INFO_NAME, name);
     //std::cerr << "AGENT NAME in hsa_mem_mgr: " << name << std::endl;
-    //std::cerr << "agent: " << std::hex << pool.agent_.handle << " pool: " << pool.pool_.handle << " min_alloc_size: " << std::dec << pool.min_alloc_size_ << std::endl; 
+    //std::cerr << "agent: " << std::hex << pool.agent_.handle << " pool: " << pool.pool_.handle << " min_alloc_size: " << std::dec << pool.min_alloc_size_ << std::endl;
 }
 
 hsa_mem_mgr::~hsa_mem_mgr()
 {
 }
 
-void * hsa_mem_mgr::alloc(std::size_t size)
+void * hsa_mem_mgr::calloc(std::size_t size)
 {
     void *result = allocator_.allocate(size, pool_.agent_);
     zero(result,size);
@@ -69,7 +69,7 @@ void * hsa_mem_mgr::copy_to_device(void *dst, const void *src, std::size_t size)
         throw std::exception();
 }
 
-void * hsa_mem_mgr::alloc_device_memory(std::size_t size)
+void * hsa_mem_mgr::calloc_device_memory(std::size_t size)
 {
     void *buffer = NULL;
     size_t mask = pool_.min_alloc_size_ - 1;
@@ -79,6 +79,6 @@ void * hsa_mem_mgr::alloc_device_memory(std::size_t size)
     hsa_status_t status = hsa_amd_memory_pool_allocate(pool_.pool_, adjusted_size, 0, &buffer);
     if (status != HSA_STATUS_SUCCESS)
         throw std::bad_alloc();
+    zero_device_memory(buffer, adjusted_size);
     return buffer;
 }
-
