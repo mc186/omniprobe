@@ -30,7 +30,7 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
   when the kernel cache is enabled it will look for kernels in the cache having identical names and parameters. This can be useful when wanting
   to compare different versions of the same kernel for overall duration.
 - LOGDUR_INSTRUMENTED
-  - Value can be either "true" or "false". If set to "true", the kernel cache with replace dispatched kernels with an instrumented alternative.
+  - Value can be either "true" or "false". If set to "true", the kernel cache will replace dispatched kernels with an instrumented alternative.
 - LOGDUR_DISPATCHES=all
 - LOGDUR_INSTRUMENTED=true
 - LOGDUR_HANDLERS=\<Message Handler for processing messages from instrumented kernels.\> e.g. libLogMessages64.so
