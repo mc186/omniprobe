@@ -31,6 +31,42 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
   to compare different versions of the same kernel for overall duration.
 - LOGDUR_INSTRUMENTED
   - Value can be either "true" or "false". If set to "true", the kernel cache with replace dispatched kernels with an instrumented alternative.
+- LOGDUR_DISPATCHES=all
+- LOGDUR_INSTRUMENTED=true
+- LOGDUR_HANDLERS=\<Message Handler for processing messages from instrumented kernels.\> e.g. libLogMessages64.so
+## omniprobe
+```
+Omniprobe is developed by Advanced Micro Devices, Research and Advanced Development
+Copyright (c) 2024 Advanced Micro Devices. All rights reserved.
+
+usage: omniprobe [options] -- application
+
+Command-line interface for running intra-kernel analytics on AMD Instinct GPUs
+
+Help:
+  -h, --help                  show this help message and exit
+
+General omniprobe arguments:
+  -v , --verbose              	Verbose output
+  -k , --kernels              	Kernel filters to define which kernels are instrumented. Valid ECMAScript regular
+                                expressions are supported. (cf. https://cplusplus.com/reference/regex/ECMAScript/)
+  -i, --instrumented, --no-instrumented
+                              	Run instrumented kernels (default: False)
+  -e, --env-dump, --no-env-dump
+                              	Dump all the environment variables for running liblogDuration64.so.
+                                (default: False)
+  -d , --dispatches           	The dispatches for which to capture instrumentation output. This only applies when
+                                running with --instrumented.  Valid options: [all, random, 1]
+  -c , --cache-location       	The location of the file system cache for instrumented kernels. For Triton this is
+                                typically found at $HOME/.triton/cache
+  -l , --log-location         	The location where all of your data should be logged. By default it will be to the
+                                console.
+  -a  [ ...], --analyzers  [ ...]
+                              	The analyzer(s) to use for processing data being streamed from instrumented kernels. 
+                              	Valid values are ['MessageLogger', 'Heatmap', 'MemoryAnalysis'] or a reference to any
+                                shared library that implements an omniprobe message handler.
+  -- [ ...]                   	Provide command for instrumenting after a double dash.
+```
 ## Building  
 This project now depends on the [dh_comms](https://github.com/AARInternal/dh_comms) library and the [instrument-amdgpu-kernels](https://github.com/CRobeck/instrument-amdgpu-kernels) tool. By default, both of these dependencies will be pulled into this project via CMake's [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) module.
 
