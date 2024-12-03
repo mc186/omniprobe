@@ -161,57 +161,59 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
         CHECK_STATUS("Signal creation error at startup",apiTable_->core_->hsa_signal_create_fn(1,0,NULL,&curr_sig));
         sig_pool_.emplace_back(curr_sig);
     }
-
-	std::vector<hsa_agent_t> gpus;
-	if (hsa_iterate_agents ([](hsa_agent_t agent, void *data){
-                    std::vector<hsa_agent_t> *agents  = reinterpret_cast<std::vector<hsa_agent_t> *>(data);
-					hsa_device_type_t type;
-                    hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, static_cast<void *>(&type));
-					if (status == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_GPU)
-						agents->emplace_back(agent); 
-                    return HSA_STATUS_SUCCESS;
-                }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
-            {
-                std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
-                std::string strFilter = config_["LOGDUR_FILTER"];
-                for (auto agent : gpus)
+    if (run_instrumented_)
+    {
+        std::vector<hsa_agent_t> gpus;
+        if (hsa_iterate_agents ([](hsa_agent_t agent, void *data){
+                        std::vector<hsa_agent_t> *agents  = reinterpret_cast<std::vector<hsa_agent_t> *>(data);
+                        hsa_device_type_t type;
+                        hsa_status_t status = hsa_agent_get_info(agent, HSA_AGENT_INFO_DEVICE, static_cast<void *>(&type));
+                        if (status == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_GPU)
+                            agents->emplace_back(agent); 
+                        return HSA_STATUS_SUCCESS;
+                    }, reinterpret_cast<void *>(&gpus))== HSA_STATUS_SUCCESS)
                 {
-                    /* If we're running Triton, the user needs to specify the location of the Triton
-                     * code object cache directory - usually in $HOME/.triton/cache */
-                    if (cacheLocation.length())
-                        kernel_cache_.setLocation(agent, cacheLocation, config_["LOGDUR_FILTER"]);
-                    else
+                    std::string cacheLocation = config_["LOGDUR_KERNEL_CACHE"];
+                    std::string strFilter = config_["LOGDUR_FILTER"];
+                    for (auto agent : gpus)
                     {
-                        /* If a KERNEL_CACHE directory is not supplied, we look for all the kernels in fat binaries
-                         * (this will be the normal case for, say, HIP applications. */
-                        std::vector<std::string>files;
-                        files.push_back(getExecutablePath());
-                        KernelArgHelper::getSharedLibraries(files);
-                        for (auto file : files)
+                        /* If we're running Triton, the user needs to specify the location of the Triton
+                         * code object cache directory - usually in $HOME/.triton/cache */
+                        if (cacheLocation.length())
+                            kernel_cache_.setLocation(agent, cacheLocation, config_["LOGDUR_FILTER"]);
+                        else
                         {
-                            //std::cerr << "File with a possible .fatbin section: " << file << std::endl;
-                            try
+                            /* If a KERNEL_CACHE directory is not supplied, we look for all the kernels in fat binaries
+                             * (this will be the normal case for, say, HIP applications. */
+                            std::vector<std::string>files;
+                            files.push_back(getExecutablePath());
+                            KernelArgHelper::getSharedLibraries(files);
+                            for (auto file : files)
                             {
-                                kernel_cache_.addFile(file, agent, strFilter);
+                                //std::cerr << "File with a possible .fatbin section: " << file << std::endl;
+                                try
+                                {
+                                    kernel_cache_.addFile(file, agent, strFilter);
+                                }
+                                catch (const std::runtime_error e)
+                                {
+                                    /* I catch this exception because the shared libraries returned by getSharedLibraries
+                                     * can include system libs that do not have the full path to the .so file
+                                     * these files will cause addFile() to throw a runtime exception.
+                                     * these exceptions are benign for our purposes because any shared lib
+                                     * we might be interested in (i.e. the ones that contain .hip_fatbin sections)
+                                     * will enumerate from getSharedLibraries with a full path to the file. 
+                                     * so we catch this exception and continue */
+                                    continue;
+                                }
                             }
-                            catch (const std::runtime_error e)
-                            {
-                                /* I catch this exception because the shared libraries returned by getSharedLibraries
-                                 * can include system libs that do not have the full path to the .so file
-                                 * these files will cause addFile() to throw a runtime exception.
-                                 * these exceptions are benign for our purposes because any shared lib
-                                 * we might be interested in (i.e. the ones that contain .hip_fatbin sections)
-                                 * will enumerate from getSharedLibraries with a full path to the file. 
-                                 * so we catch this exception and continue */
-                                continue;
-                            }
-                        }
 
-                        kdbs_[agent] = std::make_unique<kernelDB::kernelDB>(agent, "");
+                            kdbs_[agent] = std::make_unique<kernelDB::kernelDB>(agent, "");
+                        }
+                        comms_mgr_.addAgent(agent);
                     }
-                    comms_mgr_.addAgent(agent);
                 }
-            }
+    }
 }
 hsaInterceptor::~hsaInterceptor() {
     shutting_down_.store(true);
