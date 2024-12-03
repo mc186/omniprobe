@@ -45,3 +45,18 @@ This project now depends on the [dh_comms](https://github.com/AARInternal/dh_com
 
 > [!TIP]
 > Add the `-DCMAKE_INSTALL_PREFIX` flag to your CMake command to install to a standard location on your system. Don't forget to use `make install`.
+
+## Dependencies
+logDuration is now dependent on two other libraries for building, and a third library if you want to use logDuration as part of omniprobe.
+### [kerneldb](https://github.com/AARInternal/kerneldb.git)
+> kernelDB provides support for query kernel codes from HSA code objects. This can be an important capability for processing instrumented kernel output.
+> The omniprobe memory efficiency analyzer relies on this because sometimes code optimizations are made downstream in the compiler from where instrumentation
+> occurred. And proper analysis of, say, memory traces requires understanding how the code may have been optimized (e.g. ganging together individual loads into dwordx4)
+
+### [dh_comms](https://github.com/AARInternal/dh_comms.git)
+> dh_comms provides buffered I/O functionality for propagating messages from instrumented kernels to host code for consuming and analyzing messages from instrumented code at runtime.
+> Because logDuration can run in either instrumented or non-instrumented mode, dh_comms functionality needs to be built into logDuration.
+> 
+### [instrument-amdgpu-kernels](https://github.com/CRobeck/instrument-amdgpu-kernels.git)
+> Unlike either dh_comms or kerneldb, instrument-amdgpu-kernel does not get linked into logDuration, but the llvm plugins provided by this library do the instrumentation of GPU kernels
+> that logDuration relies on when running in instrumented mode. For now, when you build instrument-amdgpu-kernels for logDuration, you need to use the dh_comms_submit_address branch.
