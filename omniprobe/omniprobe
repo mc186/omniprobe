@@ -332,7 +332,7 @@ def add_general_group(parser):
         dest="dump_env",
         required=False,
         default=False,
-        help="\tDump all the environment variables for running liblogDuration64.so direction."
+        help="\tDump all the environment variables for running liblogDuration64.so."
     )
     
     
