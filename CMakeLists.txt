@@ -119,6 +119,7 @@ message("-- LIB-VERSION STRING: ${LIB_VERSION_STRING}")
 # Build subprojects
 include(fetch)
 
+
 fetch_project(
     NAME dh_comms
     GIT_REPOSITORY git@github.com:AARInternal/dh_comms.git

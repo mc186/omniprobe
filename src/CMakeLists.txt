@@ -91,7 +91,7 @@ message("${HSACO_TARGET_LIST}")
 add_custom_target(hsaco_targets DEPENDS ${HSACO_TARGET_LIST})
 
 
-link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64)
+link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64 ${CMAKE_INSTALL_PREFIX}/lib)
 add_library ( ${TARGET_LIB} SHARED ${LIB_SRC})
 add_dependencies(${TARGET_LIB} hsaco_targets dh_comms)
 
@@ -104,6 +104,7 @@ target_include_directories (
     ${HSA_RUNTIME_INC_PATH}
     ${HSA_KMT_LIB_PATH}/..
     ${DH_COMMS_INCLUDE}
+    ${CMAKE_INSTALL_PREFIX}/include
     ${Python_INCLUDE_DIRS}
 )
 
@@ -115,6 +116,7 @@ target_link_libraries(
     stdc++
     stdc++fs
     ${dh_comms_LOCATION}/build/lib/libdh_comms.so
+    kernelDB64
     amd_comgr
 )
 

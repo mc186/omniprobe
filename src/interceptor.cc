@@ -206,6 +206,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
                                 continue;
                             }
                         }
+
+                        kdbs_[agent] = std::make_unique<kernelDB::kernelDB>(agent, "");
                     }
                     comms_mgr_.addAgent(agent);
                 }
@@ -256,6 +258,12 @@ bool hsaInterceptor::addCodeObject(const std::string& name)
             for (auto agent : gpus)
             {
                 kernel_cache_.addFile(name, agent, config_["LOGDUR_FILTER"]);
+                lock_guard<std::mutex> lock(mutex_);
+                auto it = kdbs_.find(agent);
+                if (it != kdbs_.end())
+                    it->second.get()->addFile(name, agent, config_["LOGDUR_FILTER"]);
+                else
+                    kdbs_[agent] = std::make_unique<kernelDB::kernelDB>(agent, name); 
             }
         }
     }

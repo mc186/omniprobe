@@ -41,6 +41,7 @@ THE SOFTWARE.
 #include "dh_comms.h"
 #include "hsa_mem_mgr.h"
 #include "comms_mgr.h"
+#include "kerneldb/kernelDB.h"
 
 class hsaInterceptor;
 void signal_runner();
@@ -171,6 +172,7 @@ private:
     std::vector<dh_comms::message_handler_base *> mh_pool_;
     std::atomic<uint64_t> dispatch_count_;
     dispatchController dispatcher_;
+    std::map<hsa_agent_t, std::unique_ptr<kernelDB::kernelDB>, hsa_cmp<hsa_agent_t>> kdbs_;
     static std::mutex singleton_mutex_;
     static std::shared_mutex stop_mutex_;
     static hsaInterceptor *singleton_;
