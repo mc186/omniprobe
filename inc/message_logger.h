@@ -12,6 +12,7 @@ public:
     message_logger_t(const message_logger_t&) = default;
     virtual ~message_logger_t();
     virtual bool handle(const dh_comms::message_t &message) override;
+    virtual bool handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb) override;
     virtual void report() override;
     virtual void clear() override;
 

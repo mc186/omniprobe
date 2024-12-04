@@ -40,6 +40,7 @@ THE SOFTWARE.
 #include "utils.h"
 #include "dh_comms.h"
 #include "memory_heatmap.h"
+#include "kerneldb/kernelDB.h"
 
 
 typedef struct pool_specs
@@ -54,7 +55,7 @@ class comms_mgr
 public: 
     comms_mgr(HsaApiTable *pTable);
     ~comms_mgr();
-    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id);
+    dh_comms::dh_comms * checkoutCommsObject(hsa_agent_t agent, std::string& strKernelName, uint64_t dispatch_id, kernelDB::kernelDB *kdb);
     bool checkinCommsObject(hsa_agent_t agent, dh_comms::dh_comms *object);
     bool addAgent(hsa_agent_t agent);
     void setConfig(const std::map<std::string, std::string>& config);

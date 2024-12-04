@@ -139,7 +139,9 @@ target_include_directories (
   PRIVATE
     ${LIB_DIR}/test
     ${ROCM_ROOT_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
     ${ROOT_DIR}
+    ${HSA_RUNTIME_INC_PATH}
     ${DH_COMMS_INCLUDE}
 )
 target_link_options (
@@ -167,8 +169,10 @@ target_include_directories (
     ${HEATMAP_EXAMPLE}
   PRIVATE
     ${LIB_DIR}/test
-    ${ROCM_ROOT_DIR}/include
     ${ROOT_DIR}
+    ${ROCM_ROOT_DIR}/include
+    ${CMAKE_INSTALL_PREFIX}/include
+    ${HSA_RUNTIME_INC_PATH}
     ${DH_COMMS_INCLUDE}
 )
 target_link_options (

@@ -12,6 +12,7 @@ public:
     memory_heatmap_wrapper(const memory_heatmap_wrapper&) = default;
     virtual ~memory_heatmap_wrapper();
     virtual bool handle(const dh_comms::message_t &message) override;
+    virtual bool handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb) override;
     virtual void report() override;
     virtual void clear() override;
 

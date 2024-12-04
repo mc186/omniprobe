@@ -123,7 +123,7 @@ include(fetch)
 fetch_project(
     NAME dh_comms
     GIT_REPOSITORY git@github.com:AARInternal/dh_comms.git
-    GIT_TAG main
+    GIT_TAG kerneldb_support
     INCLUDE_DIRS
 )
 

@@ -720,7 +720,9 @@ hsa_kernel_dispatch_packet_t * hsaInterceptor::fixupPacket(const hsa_kernel_disp
                         {
                             void *new_kernargs = allocator_.allocate(args.kernarg_length,queues_[queue]);
 
-                            comms = comms_mgr_.checkoutCommsObject(queues_[queue], it->second.name_, dispatch_id);
+                            kernelDB::kernelDB *kdb = kdbs_[queues_[queue]].get();
+
+                            comms = comms_mgr_.checkoutCommsObject(queues_[queue], it->second.name_, dispatch_id, kdb);
 
                             fixupKernArgs(new_kernargs, packet->kernarg_address, comms->get_dev_rsrc_ptr(), args);
                             dispatch->kernarg_address = new_kernargs;

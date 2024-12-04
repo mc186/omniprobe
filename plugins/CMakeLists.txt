@@ -44,7 +44,7 @@ set(MEM_ANALYSIS_SRC
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64)
+link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64 ${CMAKE_INSTALL_PREFIX}/lib)
 add_library ( ${DEFAULT_PLUGIN_NAME} SHARED ${DEFAULT_PLUGIN_SRC})
 add_library ( ${LOGGER_PLUGIN_NAME} SHARED ${LOGGER_PLUGIN_SRC})
 add_library ( ${MEM_ANALYSIS_PLUGIN_NAME} SHARED ${MEM_ANALYSIS_SRC})
@@ -53,6 +53,7 @@ target_include_directories (
     ${DEFAULT_PLUGIN_NAME}
   PRIVATE
     ${LIB_DIR}
+    ${CMAKE_INSTALL_PREFIX}/include
     ${ROCM_ROOT_DIR}/include
     ${ROOT_DIR}
     ${HSA_RUNTIME_INC_PATH}
@@ -65,6 +66,7 @@ target_include_directories (
     ${LOGGER_PLUGIN_NAME}
   PRIVATE
     ${LIB_DIR}
+    ${CMAKE_INSTALL_PREFIX}/include
     ${ROCM_ROOT_DIR}/include
     ${ROOT_DIR}
     ${HSA_RUNTIME_INC_PATH}
@@ -77,6 +79,7 @@ target_include_directories (
     ${MEM_ANALYSIS_PLUGIN_NAME}
   PRIVATE
     ${LIB_DIR}
+    ${CMAKE_INSTALL_PREFIX}/include
     ${ROCM_ROOT_DIR}/include
     ${ROOT_DIR}
     ${HSA_RUNTIME_INC_PATH}
@@ -93,6 +96,7 @@ target_link_libraries(
     stdc++
     stdc++fs
     ${dh_comms_LOCATION}/build/lib/libdh_comms.so
+    kernelDB64
 )
 
 target_link_libraries(
@@ -103,6 +107,7 @@ target_link_libraries(
     stdc++
     stdc++fs
     ${dh_comms_LOCATION}/build/lib/libdh_comms.so
+    kernelDB64
 )
 
 target_link_libraries(
@@ -113,6 +118,7 @@ target_link_libraries(
     stdc++
     stdc++fs
     ${dh_comms_LOCATION}/build/lib/libdh_comms.so
+    kernelDB64
 )
 
 

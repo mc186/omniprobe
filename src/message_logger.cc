@@ -27,6 +27,23 @@ message_logger_t::~message_logger_t()
     if(location_ != "console")
         delete log_file_;
 }
+bool message_logger_t::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
+{
+    std::cout << kernel << std::endl;
+    dh_comms::wave_header_t hdr = message.wave_header();
+    if (message.wave_header().user_type != dh_comms::message_type::address)
+        return false;
+    try
+    {
+    auto instructions = kdb.getInstructionsForLine(kernel,hdr.src_loc_idx);
+    for (auto inst : instructions)
+        std::cout << inst.inst_ << std::endl;
+    }
+    catch (std::runtime_error e)
+    {
+    }
+    return handle(message);
+}
 
 bool message_logger_t::handle(const dh_comms::message_t &message)
 {
