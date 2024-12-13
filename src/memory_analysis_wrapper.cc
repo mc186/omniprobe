@@ -27,6 +27,15 @@ bool memory_analysis_wrapper_t::handle(const dh_comms::message_t &message) {
   return wrapped_.handle(message);
 }
 
+void memory_analysis_wrapper_t::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
+{
+    if (kernel_name.length() == 0)
+    {
+        std::vector<uint32_t> lines;
+        kdb.getKernelLines(kernel_name, lines);
+    }
+    report();
+}
 
 void memory_analysis_wrapper_t::report() {
   std::cout << "Memory analysis for " << kernel_ << " dispatch_id[" << std::dec << dispatch_id_ << "]" << std::endl;

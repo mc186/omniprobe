@@ -81,6 +81,16 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
     return true;
 }
 
+void message_logger_t::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
+{
+    if (kernel_name.length() == 0)
+    {
+        std::vector<uint32_t> lines;
+        kdb.getKernelLines(kernel_name, lines);
+    }
+    report();
+}
+
 void message_logger_t::report()
 {
     printf("Omniprobe Message Logger complete.\n");

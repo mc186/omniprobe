@@ -40,6 +40,15 @@ bool memory_heatmap_wrapper::handle(const dh_comms::message_t &message)
     }
     return wrapped_.handle(message);;
 }
+void memory_heatmap_wrapper::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
+{
+    if (kernel_name.length() == 0)
+    {
+        std::vector<uint32_t> lines;
+        kdb.getKernelLines(kernel_name, lines);
+    }
+    report();
+}
 
 void memory_heatmap_wrapper::report()
 {
