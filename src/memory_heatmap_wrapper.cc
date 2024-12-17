@@ -22,9 +22,15 @@ memory_heatmap_wrapper::~memory_heatmap_wrapper()
 
 bool memory_heatmap_wrapper::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
-    auto instructions = kdb.getInstructionsForLine(kernel,message.wave_header().src_loc_idx);
-    for (auto inst : instructions)
-        std::cout << inst.inst_ << std::endl;
+    try
+    {
+        auto instructions = kdb.getInstructionsForLine(kernel,message.wave_header().src_loc_idx);
+        for (auto inst : instructions)
+            std::cout << inst.inst_ << std::endl;
+    }
+    catch(std::runtime_error e)
+    {
+    }
     return handle(message);
 }
 

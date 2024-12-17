@@ -24,22 +24,28 @@ time_interval_handler_wrapper::~time_interval_handler_wrapper()
 bool time_interval_handler_wrapper::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
     auto hdr = message.wave_header();
-    auto instructions = kdb.getInstructionsForLine(kernel,hdr.src_loc_idx);
-    if (instructions.size())
+    try
     {
-        if (current_block_)
+        auto instructions = kdb.getInstructionsForLine(kernel,hdr.src_loc_idx);
+        if (instructions.size())
         {
-            auto it = block_timings_.find(current_block_);
-            if (it != block_timings_.end())
-                it->second += hdr.timestamp - start_time_;
-            else
-                block_timings_[current_block_] = hdr.timestamp - start_time_;
+            if (current_block_)
+            {
+                auto it = block_timings_.find(current_block_);
+                if (it != block_timings_.end())
+                    it->second += hdr.timestamp - start_time_;
+                else
+                    block_timings_[current_block_] = hdr.timestamp - start_time_;
+            }
+            current_block_ = instructions[0].block_;
+            start_time_ = hdr.timestamp;
         }
-        current_block_ = instructions[0].block_;
-        start_time_ = hdr.timestamp;
+        for (auto inst : instructions)
+            std::cout << inst.inst_ << std::endl;
     }
-    for (auto inst : instructions)
-        std::cout << inst.inst_ << std::endl;
+    catch (std::runtime_error e)
+    {
+    }
     return handle(message);
 }
 
