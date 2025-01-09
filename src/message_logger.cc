@@ -19,7 +19,7 @@ message_logger_t::message_logger_t(const std::string& strKernel, uint64_t dispat
     else
         log_file_ = new std::ofstream(location, std::ios::app);
     
-    *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,address" << std::endl;
+    *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,kind,address" << std::endl;
 }
 
 message_logger_t::~message_logger_t()
@@ -63,7 +63,9 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
 
     *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.src_loc_idx << "," << dispatch_id_ << ",";
 
+
     *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
+    *log_file_ << (hdr.user_data & 0b11) << ",";
     for (size_t i = 0; i != message.no_data_items(); ++i)
     {
         uint64_t address = *(const uint64_t *)message.data_item(i);
