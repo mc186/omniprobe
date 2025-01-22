@@ -2,7 +2,7 @@
 #include "dh_comms.h"
 #include "message_handlers.h"
 #include "time_interval_handler.h"
-#include "kerneldb/kernelDB.h"
+#include "kernelDB.h"
 
 
 class time_interval_handler_wrapper : public dh_comms::message_handler_base
