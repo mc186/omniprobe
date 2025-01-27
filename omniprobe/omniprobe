@@ -116,8 +116,8 @@ def get_rocm_path():
 def get_omniprobe_home():
     tmp = os.path.dirname(__file__)
     nodes = tmp.split("/")
-    if nodes[len(nodes) - 2] == '.':
-        tmp = "/".join(nodes[len(nodes) - 2])
+#    if nodes[len(nodes) - 2] == '.':
+#        tmp = "/".join(nodes[len(nodes) - 2])
     return tmp
 
 def get_local_isa():
