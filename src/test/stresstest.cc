@@ -5,18 +5,18 @@
 #include "memory_heatmap.h"
 
 // Compile with hipcc -O3 --amdgpu-target=gfx908 -I${ROCM_PATH}/roctracer/include -L${ROCM_PATH}/roctracer/lib -lroctx64 test.cpp
- 
+
 #include <cstdio>
 #include <iostream>
 #include <unistd.h>
 #include <hip/hip_profile.h>
 //#include <roctx.h>
- 
- 
+
+
 #define N 2560
 #define num_iters 1 //KAL 1000
- 
- 
+
+
 template<int n, int m>
 __global__ void kernel(double* x) {
     for (int idx = threadIdx.x + blockIdx.x * blockDim.x; idx < N; idx += gridDim.x * blockDim.x)
@@ -28,7 +28,7 @@ __global__ void kernel(double* x) {
         }
     }
 }
- 
+
 template<int n, int m>
 __global__ void __amd_crk_kernel(double* x, void *ptr) {
     if (ptr)
@@ -39,7 +39,7 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
         dh_comms::time_interval time_interval;
         time_interval.start = __clock64(); // time in cycles
         dh_comms::s_submit_wave_header(rsrc); // scalar message, wave header only
-        
+
 
         size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx >= N)
@@ -50,7 +50,7 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
 
             return;
         }
-        
+
         // scalar message with lane headers, without data
         //dh_comms::s_submit_message(rsrc, nullptr, 0, true, __LINE__);
 
@@ -63,7 +63,7 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
         //    #pragma unroll
             for (int i = 0; i < n; ++i)
             {
-                dh_comms::v_submit_address(rsrc, x + idx, __LINE__, 0b01, 0b01, sizeof(x[0]));
+                dh_comms::v_submit_address(rsrc, x + idx, 0, __LINE__, 0, __LINE__, 0b01, 0b01, sizeof(x[0]));
                 x[idx] += i * m;
             }
         }
@@ -85,7 +85,7 @@ __global__ void __amd_crk_kernel(double* x, void *ptr) {
 }
 
 /*__global__ void __amd_crk_kernel(int n, int m, double* x, void *ptr) {
-    
+
     dh_comms::dh_comms_descriptor *rsrc = (dh_comms::dh_comms_descriptor *)ptr;
 
     dh_comms::time_interval time_interval;
@@ -108,7 +108,7 @@ void cpuWork() {
     // Do some CPU "work".
     usleep(100);
 }
- 
+
 inline void hip_assert(hipError_t err, const char *file, int line)
 {
     if (err != hipSuccess)
@@ -140,7 +140,7 @@ void print_help() {
 
 #define hipErrorCheck(f) { hip_assert((f), __FILE__, __LINE__); }
 #define kernelErrorCheck() { hipErrorCheck(hipPeekAtLastError()); }
- 
+
 int main(int argc, char**argv) {
     int iterations = 0;
     int opt;
@@ -176,17 +176,17 @@ int main(int argc, char**argv) {
     std::cout << "Number of iterations: " << iterations << std::endl;
 
     std::cout << "STRESSTEST\n";
- 
+
     size_t sz = N * sizeof(double);
     hipErrorCheck(hipHostMalloc(&x_h, sz));
- 
+
     memset(x_h, 0, sz);
     hipErrorCheck(hipMalloc(&x, sz));
     //hipErrorCheck(hipMemset(x, 0, sz));
- 
- 
+
+
     hipFuncAttributes attr;
- 
+
     int blocks = 80;
     int threads = 32;
     int fact = 1;//100;KAL
@@ -202,9 +202,9 @@ int main(int argc, char**argv) {
     kernelErrorCheck();
     hipErrorCheck(hipDeviceSynchronize());
 //    exit(0);
- 
+
     for (int j = 0; j < iterations; ++j) {
- 
+
         for (int n = 0; n < 25*fact; ++n) {
       //      hipErrorCheck(hipMemcpy(x, x_h, sz, hipMemcpyHostToDevice));
             HIP_KERNEL_NAME(kernel<1,1>)<<<dim3(blocks), dim3(threads)>>>(x);
@@ -296,14 +296,14 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
         }
         exit(0);
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
-        
+
         hipStream_t stream;
         hipErrorCheck(hipStreamCreate(&stream));
-    
- 
+
+
         for (int n = 0; n < 200*fact; ++n) {
             //roctxRangePushA("range1");
             hipErrorCheck(hipFuncGetAttributes(&attr, reinterpret_cast<const void*>(kernel<10,1>)));
@@ -312,10 +312,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipStreamSynchronize(stream));
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 30*fact; ++n) {
             //roctxRangePushA("range2");
             for (int k = 0; k < 7; ++k) {
@@ -326,10 +326,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 100*fact; ++n) {
             //roctxRangePushA("range3");
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<7,1>), dim3(blocks), dim3(threads), 0, 0, x);
@@ -345,10 +345,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 100*fact; ++n) {
             //roctxRangePushA("range4");
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<7,1>), dim3(blocks), dim3(threads), 0, 0, x);
@@ -364,10 +364,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 50*fact; ++n) {
             //roctxRangePushA("range5");
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<6,1>), dim3(blocks), dim3(threads), 0, 0, x);
@@ -389,10 +389,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 50*fact; ++n) {
             //roctxRangePushA("range6");
             int val;
@@ -402,10 +402,10 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         for (int n = 0; n < 50*fact; ++n) {
             //roctxRangePushA("range7");
             hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<5000,1>), dim3(blocks), dim3(threads), 0, 0, x);
@@ -413,18 +413,17 @@ int main(int argc, char**argv) {
             hipErrorCheck(hipDeviceSynchronize());
             //roctxRangePop();
         }
- 
+
         hipErrorCheck(hipMemset(x, 0, sz));
         cpuWork();
- 
+
         hipErrorCheck(hipDeviceSynchronize());
         hipErrorCheck(hipStreamDestroy(stream));
- 
+
     }
- 
+
     hipErrorCheck(hipHostFree(x_h));
     hipErrorCheck(hipFree(x));
     //hipProfilerStop();
- 
-}
 
+}
