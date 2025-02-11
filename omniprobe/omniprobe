@@ -150,7 +150,7 @@ rocm_path = get_rocm_path()
 
 analytics_config = {}
 
-op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/lib/liblogDuration64.so"}
+op_run_env = {"LOGDUR_INSTRUMENTED": "false", "HSA_TOOLS_LIB": f"{os.path.dirname(__file__)}/../../lib/logDuration/liblogDuration64.so"}
 
 def validate_triton_config():
     global triton_config
