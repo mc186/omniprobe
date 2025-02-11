@@ -121,5 +121,10 @@ target_link_libraries(
     kernelDB64
 )
 
-
-
+install(TARGETS
+    ${DEFAULT_PLUGIN_NAME}
+    ${LOGGER_PLUGIN_NAME}
+    ${MEM_ANALYSIS_PLUGIN_NAME}
+  LIBRARY DESTINATION
+    lib/${DEST_NAME}
+)
