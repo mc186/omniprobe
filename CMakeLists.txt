@@ -185,6 +185,7 @@ message("-----------Dest-name: ${DEST_NAME}")
 # Install header and library
 install(TARGETS ${INTERCEPTOR_TARGET} LIBRARY DESTINATION lib/${DEST_NAME})
 install(PROGRAMS ${ROOT_DIR}/omniprobe/omniprobe DESTINATION bin/${DEST_NAME})
+install(DIRECTORY ${ROOT_DIR}/omniprobe/config DESTINATION bin/${DEST_NAME} FILES_MATCHING PATTERN "*")
 
 # Packaging directives
 set(CPACK_GENERATOR "DEB" "RPM" "TGZ")
