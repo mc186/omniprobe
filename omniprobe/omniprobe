@@ -138,8 +138,8 @@ def get_local_isa():
             return "gfx90a"
     return None
 
-triton_config = {"TRITON_LOGGER_LEVEL": "3", 
-                 "TRITON_ALWAYS_COMPILE": "1", 
+triton_config = {"TRITON_LOGGER_LEVEL": "3",
+                 "TRITON_ALWAYS_COMPILE": "1",
                  "TRITON_DISABLE_LINE_INFO": "0",
                  "TRITON_HIP_LLD_PATH": f"{get_rocm_path()}/llvm/bin/ld.lld",
                  "AMDCGN_INSTRUMENTATION_FUNCTIONS_FILE": f"{get_omniprobe_home()}/triton/dh_comms_dev.co4.{get_local_isa()}.bc",
@@ -190,7 +190,7 @@ def setup_env(parms):
         env['LOGDUR_LOG_LOCATION'] = "console"
         env_dump['LOGDUR_LOG_LOCATION'] = "console"
 
-    
+
     if len(parms.cache_location):
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
@@ -209,7 +209,7 @@ def setup_env(parms):
     if len(parms.dispatches):
         env['LOGDUR_DISPATCHES'] = parms.dispatches
         env_dump['LOGDUR_DISPATCHES'] = parms.dispatches
-    
+
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
         env_dump['LOGDUR_INSTRUMENTED'] = "true"
@@ -300,7 +300,7 @@ def add_general_group(parser):
         help="\tSpecify the type of instrumentation to run"
     )
     '''
-    
+
     general_group.add_argument (
         "-k",
         "--kernels",
@@ -322,7 +322,7 @@ def add_general_group(parser):
         default=False,
         help="\tRun instrumented kernels"
     )
-    
+
     general_group.add_argument (
         "-e",
         "--env-dump",
@@ -334,8 +334,8 @@ def add_general_group(parser):
         default=False,
         help="\tDump all the environment variables for running liblogDuration64.so."
     )
-    
-    
+
+
     general_group.add_argument (
         "-d",
         "--dispatches",
@@ -346,7 +346,7 @@ def add_general_group(parser):
         default="all",
         help="\tThe dispatches for which to capture instrumentation output. This only applies when running with --instrumented.  Valid options: [all, random, 1]"
     )
-    
+
     general_group.add_argument (
         "-c",
         "--cache-location",
@@ -357,7 +357,7 @@ def add_general_group(parser):
         default="",
         help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
     )
-    
+
     general_group.add_argument (
         "-l",
         "--log-location",
@@ -369,7 +369,7 @@ def add_general_group(parser):
         help="\tThe location where all of your data should be logged. By default it will be to the console."
     )
 
-    
+
     general_group.add_argument (
         "-a",
         "--analyzers",
@@ -381,7 +381,7 @@ def add_general_group(parser):
         default=[f"{get_omniprobe_home()}/lib/libdefaultMessageHandlers64.so"],
         help=f"\tThe analyzer(s) to use for processing data being streamed from instrumented kernels. \n\tValid values are {names} or a reference to any shared library that implements an omniprobe message handler.\n"
     )
-    
+
     general_group.add_argument(
         "remaining",
         metavar="-- [ ...]",
@@ -400,7 +400,7 @@ def parse_args():
             usage="omniprobe [options] -- application"
            )
     parser._optionals.title = "Help"
-    
+
     prog="omniprobe",
     allow_abbrev=False,
     formatter_class=lambda prog: argparse.RawTextHelpFormatter(prog, max_help_position=40)
@@ -409,7 +409,7 @@ def parse_args():
     parms = parser.parse_args()
     return parms
 
-    
+
 def main():
     print("\nOmniprobe is developed by Advanced Micro Devices, Research and Advanced Development")
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
@@ -430,7 +430,7 @@ def main():
         capture_subprocess_output(parms.remaining[1:], new_env=setup_env(parms))
     elif parms.dump_env == True:
         setup_env(parms)
-        
+
 
 if __name__ == "__main__":
     main()
