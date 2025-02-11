@@ -114,7 +114,7 @@ std::string getInstrumentedName(const std::string& func_decl) {
     }
 
     //std::cout << "Instrumented name: " << result << std::endl;
-    
+
     return result;
 }
 
@@ -144,7 +144,7 @@ std::vector<std::string> getIsaList(hsa_agent_t agent)
                 }
            }
            return HSA_STATUS_SUCCESS;
-        }, reinterpret_cast<void *>(&list));   
+        }, reinterpret_cast<void *>(&list));
     return list;
 }
 
@@ -168,7 +168,7 @@ void signalPool::checkin(hsa_signal_t sig)
     lock_guard<mutex> lock(mutex_);
 }
 
-coCache::coCache(HsaApiTable *apiTable) 
+coCache::coCache(HsaApiTable *apiTable)
 {
     apiTable_ = apiTable;
     auto status = apiTable_->core_->hsa_system_get_major_extension_table_fn(HSA_EXTENSION_AMD_LOADER, 1, sizeof(loader_api_), &loader_api_);
@@ -206,9 +206,9 @@ bool coCache::hasKernels(hsa_agent_t agent)
 {
     lock_guard<std::mutex> lock(mutex);
     return lookup_map_.find(agent) != lookup_map_.end();
-    
+
 }
-    
+
 bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descriptor_t& desc, bool instrumented)
 {
     bool bReturn = false;
@@ -252,7 +252,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
     hsa_file_t file_handle = open(name.c_str(), O_RDONLY);
     hsa_status_t status;
     std::vector<uint8_t> co_bits;
-    
+
     // Create executable.
     hsa_executable_t executable;
     status = apiTable_->core_->hsa_executable_create_alt_fn(HSA_PROFILE_FULL, HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT,
@@ -286,7 +286,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
         }
         else
             CHECK_STATUS("Error in loading executable object", status);
-        p_kh = new KernelArgHelper(name); 
+        p_kh = new KernelArgHelper(name);
     }
     else
     {
@@ -347,7 +347,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
 
             CHECK_STATUS("Can't retrieve a kernel object from a valid symbol", apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_KERNEL_OBJECT, reinterpret_cast<void *>(&kernel_object)));
             uint32_t length;
-            CHECK_STATUS("Can't retrieve the length of kernel name from a valid symbol", 
+            CHECK_STATUS("Can't retrieve the length of kernel name from a valid symbol",
                 apiTable_->core_->hsa_executable_symbol_get_info_fn(sym, HSA_EXECUTABLE_SYMBOL_INFO_NAME_LENGTH,&length));
             char *name = reinterpret_cast<char *>(malloc(length + 1));
             if (name)
@@ -358,7 +358,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
 
                 string strName = demangleName(name);
                 //std::cout << "Kernel Name Found: " << strName << std::endl;
-                // If a kernel filter was supplied, match the demangled name to the filter. If there's no match, 
+                // If a kernel filter was supplied, match the demangled name to the filter. If there's no match,
                 // skip this symbol because we don't want to run instrumented for kernels whose names don't
                 // match on the filter
                 if (strFilter.size())
@@ -409,7 +409,7 @@ bool coCache::addFile(const std::string& name, hsa_agent_t agent, const std::str
     delete p_kh;
     return bResult;
 }
-    
+
 bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, const std::string& strFilter, bool instrumented)
 {
     filelist_.clear();
@@ -450,7 +450,7 @@ uint32_t coCache::getArgSize(uint64_t kernel_object)
 }
 
 extern decltype(hsa_executable_symbol_get_info)* hsa_executable_symbol_get_info_fn;
-    
+
 uint64_t coCache::findAlternative(hsa_executable_symbol_t symbol, const std::string& name, hsa_agent_t queue_agent)
 {
     uint64_t object = 0;
@@ -576,7 +576,7 @@ logDuration::~logDuration()
         delete log_file_;
     }
 }
-    
+
 void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs)
 {
     if (log_file_)
@@ -632,7 +632,7 @@ KernArgAllocator::KernArgAllocator(HsaApiTable *apiTable, ostream& out) : out_(o
     apiTable_->core_->hsa_iterate_agents_fn([](hsa_agent_t agent, void *data){
         hsa_device_type_t type;
         if (hsa_agent_get_info(agent,HSA_AGENT_INFO_DEVICE, &type) == HSA_STATUS_SUCCESS && type == HSA_DEVICE_TYPE_CPU)
-        { 
+        {
             hsa_amd_agent_iterate_memory_pools(agent, [](hsa_amd_memory_pool_t pool, void *data){
                 hsa_amd_segment_t segment;
                 uint32_t flags;
@@ -670,7 +670,7 @@ void KernArgAllocator::free(void *ptr) const
 KernArgAllocator::~KernArgAllocator()
 {
 }
-    
+
 #define CHECK_COMGR(call)                                                                          \
   if (amd_comgr_status_s status = call) {                                                          \
     const char* reason = "";                                                                       \
@@ -711,7 +711,7 @@ KernelArgHelper::KernelArgHelper(const std::string file_name)
     file.close();
     CHECK_COMGR(amd_comgr_create_data(AMD_COMGR_DATA_KIND_EXECUTABLE, &executable));
     CHECK_COMGR(amd_comgr_set_data(executable, buff.size(), buff.data()));
-    
+
     amd_comgr_metadata_node_t metadata;
     CHECK_COMGR(amd_comgr_get_data_metadata(executable, &metadata));
 
@@ -721,7 +721,7 @@ KernelArgHelper::KernelArgHelper(const std::string file_name)
     if (md_kind == AMD_COMGR_METADATA_KIND_MAP)
     {
         std::string strIndent("");
-        std::map<std::string, arg_descriptor_t> parms; 
+        std::map<std::string, arg_descriptor_t> parms;
         computeKernargData(metadata);
     }
     CHECK_COMGR(amd_comgr_release_data(executable));
@@ -738,7 +738,7 @@ KernelArgHelper::~KernelArgHelper()
  *   1. Query all the isa's supported by the agent supplied as a parameter. It's theoretically possible
  *      for an agent to support more than one ISA. the call to getIsaList returns a vector of ISA names.
  *   2. Create a FATBIN comgr data object and set the bits into an object of that type.
- *   3. To find a code object that will run on the supplied agent, this function creates an array of 
+ *   3. To find a code object that will run on the supplied agent, this function creates an array of
  *      code object info structures, Each of these structures contains a pointer to the isa name,
  *      and the code object offset and length are set to zero.
  *   4. This array of code_object_info structs is passed to a comgr helper function (i.e. lookup_code_object)
@@ -773,7 +773,7 @@ amd_comgr_code_object_info_t KernelArgHelper::getCodeObjectInfo(hsa_agent_t agen
                 CHECK_COMGR(amd_comgr_release_data(bundle));
                 return co;
             }
-        }   
+        }
     }
     CHECK_COMGR(amd_comgr_release_data(bundle));
     return {0,0,0};
@@ -804,15 +804,15 @@ KernelArgHelper::KernelArgHelper(hsa_agent_t agent, std::vector<uint8_t>& bits)
                 addCodeObject(reinterpret_cast<const char *>(bits.data() + co.offset), co.size);
                 break;
             }
-        }   
+        }
     }
     CHECK_COMGR(amd_comgr_release_data(bundle));
 }
 
 /* Given the bits of a code object, create an instance of a comgr executable
- * and siphon out all of the kernel argument metadata needed later on 
+ * and siphon out all of the kernel argument metadata needed later on
  * when we rewrite kernargs to inject a pointer to a dh_comms object. */
-    
+
 void KernelArgHelper::addCodeObject(const char *bits, size_t length)
 {
     amd_comgr_data_t executable;
@@ -826,25 +826,25 @@ void KernelArgHelper::addCodeObject(const char *bits, size_t length)
     if (md_kind == AMD_COMGR_METADATA_KIND_MAP)
     {
         std::string strIndent("");
-        std::map<std::string, arg_descriptor_t> parms; 
+        std::map<std::string, arg_descriptor_t> parms;
         computeKernargData(metadata);
     }
     CHECK_COMGR(amd_comgr_release_data(executable));
 
 }
 /* A helper function to create a list of all the shared libraries in use by the current
- * process. This is needed for HIP-style applications where, rather than utilizing 
+ * process. This is needed for HIP-style applications where, rather than utilizing
  * a code object cache of .hsaco files (e.g. the way Triton works), the application
  * is s HIP application where the instrumented clones are bound to the executable in
  * a fat binary */
 void KernelArgHelper::getSharedLibraries(std::vector<std::string>& libraries) {
     dl_iterate_phdr([](struct dl_phdr_info *info, size_t size, void *data){
         std::vector<std::string>* p_libraries = static_cast<std::vector<std::string>*>(data);
-        
+
         if (info->dlpi_name && *info->dlpi_name) {  // Filter out empty names
             p_libraries->push_back(std::string(info->dlpi_name));
         }
-        
+
         return 0;  // Continue iteration
     }, &libraries);
     return;
@@ -912,7 +912,7 @@ void KernelArgHelper::getElfSectionBits(const std::string &fileName, const std::
     throw std::runtime_error("Section not found: " + sectionName);
 }
 
-/* The way instrumented clones are created, the compiler adds a void * parameter to the end of the parameter list 
+/* The way instrumented clones are created, the compiler adds a void * parameter to the end of the parameter list
  * of the instrumented kernel. The void * is actually expected to be a pointer to device memory to a dh_comms::dh_comms_descriptor
  * At runtime, this library silently replaces the application's kernel with an instrumentd equivalent that has the added void *
  * parameter. But that means the kernel args passed to the original kernel are incomplete. So we have to create
@@ -1042,14 +1042,14 @@ bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
     {
         void *handle = dlopen(lib.c_str(),RTLD_NOW);
         if (!handle)
-            std::cerr << "ERROR: " << errno << std::endl;
+            std::cerr << "ERROR: " << errno << " while trying to load " << lib << std::endl;
         else
         {
             getMessageHandlers_t func = reinterpret_cast<getMessageHandlers_t>(dlsym(handle, "getMessageHandlers"));
             if (func)
             {
                 plugins_[handle] = func;
-            } 
+            }
         }
     }
     return true;
