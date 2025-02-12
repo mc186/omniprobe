@@ -26,7 +26,7 @@ bool time_interval_handler_wrapper::handle(const dh_comms::message_t &message, c
     auto hdr = message.wave_header();
     try
     {
-        auto instructions = kdb.getInstructionsForLine(kernel,hdr.src_loc_idx);
+        auto instructions = kdb.getInstructionsForLine(kernel, hdr.dwarf_line);
         if (instructions.size())
         {
             if (current_block_)
@@ -76,4 +76,3 @@ void time_interval_handler_wrapper::clear()
     strKernel_ = "";
     dispatch_id_ = 0;
 }
-

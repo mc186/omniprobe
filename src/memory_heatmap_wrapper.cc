@@ -24,7 +24,7 @@ bool memory_heatmap_wrapper::handle(const dh_comms::message_t &message, const st
 {
     try
     {
-        auto instructions = kdb.getInstructionsForLine(kernel,message.wave_header().src_loc_idx);
+        auto instructions = kdb.getInstructionsForLine(kernel,message.wave_header().dwarf_line);
         for (auto inst : instructions)
             std::cout << inst.inst_ << std::endl;
     }
@@ -66,4 +66,3 @@ void memory_heatmap_wrapper::clear()
 {
     wrapped_.clear();
 }
-

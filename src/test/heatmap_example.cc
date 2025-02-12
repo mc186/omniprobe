@@ -37,8 +37,8 @@ __global__ void __amd_crk_test(float *dst, float *src, float alpha, size_t array
 
     // two vector messages with lane headers and a data item for every active lane.
     // source code line is passed as location index
-    dh_comms::v_submit_address(rsrc, src + idx, 0, __LINE__, 0, __LINE__, 0b01, 0b01, sizeof(*dst));
-    dh_comms::v_submit_address(rsrc, dst + idx, 0, __LINE__, 0, __LINE__, 0b01, 0b01, sizeof(*dst));
+    dh_comms::v_submit_address(rsrc, src + idx, 0, __LINE__, 0, 0b01, 0b01, sizeof(*dst));
+    dh_comms::v_submit_address(rsrc, dst + idx, 0, __LINE__, 0, 0b01, 0b01, sizeof(*dst));
     time_interval.stop = __clock64(); // time in cycles
     s_submit_time_interval(rsrc, &time_interval);
 }
@@ -69,8 +69,8 @@ __global__ void test(float *dst, float *src, float alpha, size_t array_size, dh_
 
     // two vector messages with lane headers and a data item for every active lane.
     // source code line is passed as location index
-    dh_comms::v_submit_address(rsrc, src + idx, 0, __LINE__, 0, __LINE__, 0b01, 0b01, sizeof(*src));
-    dh_comms::v_submit_address(rsrc, dst + idx, 0, __LINE__, 0, __LINE__, 0b01, 0b01, sizeof(*src));
+    dh_comms::v_submit_address(rsrc, src + idx, 0, __LINE__, 0, 0b01, 0b01, sizeof(*src));
+    dh_comms::v_submit_address(rsrc, dst + idx, 0, __LINE__, 0, 0b01, 0b01, sizeof(*src));
     time_interval.stop = __clock64(); // time in cycles
     s_submit_time_interval(rsrc, &time_interval);
 }
