@@ -9,6 +9,9 @@
 #include <string>
 #include <iostream>
 
+__attribute__((constructor)) void on_library_load() { std::cout << "Memory Analysis Wrapper loaded." << std::endl; }
+__attribute__((destructor)) void on_library_unload() { std::cout << "Memory Analysis Wrapper unloaded." << std::endl; }
+
 memory_analysis_wrapper_t::memory_analysis_wrapper_t(const std::string& kernel, uint64_t dispatch_id, const std::string& location,  bool verbose) :
     kernel_(kernel), dispatch_id_(dispatch_id), location_(location), wrapped_(verbose)
 {
