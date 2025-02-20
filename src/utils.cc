@@ -1040,7 +1040,7 @@ bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
 {
     for (auto lib : handlers)
     {
-        void *handle = dlopen(lib.c_str(),RTLD_NOW);
+        void *handle = dlopen(lib.c_str(),RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE);
         if (!handle)
             std::cerr << "ERROR: " << errno << " while trying to load " << lib << std::endl;
         else
