@@ -48,7 +48,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 function(generate_hsaco TARGET_ID INPUT_FILE OUTPUT_FILE)
     separate_arguments(
-        CLANG_ARG_LIST 
+        CLANG_ARG_LIST
         UNIX_COMMAND
         "-O2 -x cl -Xclang -finclude-default-header -cl-denorms-are-zero -cl-std=CL2.0 -Wl,--build-id=sha1
     -target amdgcn-amd-amdhsa -mcpu=${TARGET_ID} -o ${OUTPUT_FILE} ${INPUT_FILE}")
@@ -56,17 +56,17 @@ function(generate_hsaco TARGET_ID INPUT_FILE OUTPUT_FILE)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/test_kernels/${OUTPUT_FILE}
         COMMAND ${clang} ${CLANG_ARG_LIST}
-        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/test_kernels/
-        DEPENDS ${INPUT_FILE}
-        COMMENT
-            "Building ${OUTPUT_FILE}..." -E copy
+        COMMAND ${CMAKE_COMMAND} -E copy
             ${PROJECT_BINARY_DIR}/test_kernels/${OUTPUT_FILE}
             ${PROJECT_BINARY_DIR}/test_kernels/${target_id}_copy.hsaco
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/test_kernels/
+        DEPENDS ${INPUT_FILE}
+        COMMENT "Building ${OUTPUT_FILE}..."
         VERBATIM)
     set(HSACO_TARGET_LIST
         ${HSACO_TARGET_LIST}
         ${PROJECT_BINARY_DIR}/test_kernels/${OUTPUT_FILE}
-        PARENT_SCOPE)        
+        PARENT_SCOPE)
 endfunction(generate_hsaco)
 
 set(GPU_LIST "gfx900" "gfx906" "gfx908" "gfx90a" "gfx942" "gfx1030" "gfx1031" "gfx1032" "gfx1100" "gfx1101" "gfx1102")
@@ -178,4 +178,3 @@ target_link_options (
   PRIVATE
     -fgpu-rdc
 )
-
