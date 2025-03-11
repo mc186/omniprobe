@@ -33,6 +33,9 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
 
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-ggdb")
 
+# Ensure that lib files are installed in the correct directory for both Ubuntu and RHEL flavors
+set(CMAKE_INSTALL_LIBDIR lib CACHE PATH "Output directory for libraries")
+
 include(utils)
 
 get_version("1.0.0")
