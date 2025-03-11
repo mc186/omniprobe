@@ -95,7 +95,12 @@ else()
 endif()
 
 # Generate a configuration file
-file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "build_dir=${CMAKE_BINARY_DIR}\n")
+if(DEFINED ENV{TRITON_LLVM})
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "triton_llvm=true\n")
+else()
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "triton_llvm=false\n")
+endif()
+file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "build_dir=${CMAKE_BINARY_DIR}\n")
 file(APPEND ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "install_dir=${CMAKE_INSTALL_PREFIX}\n")
 
 # Set build environment
