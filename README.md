@@ -72,7 +72,9 @@ General omniprobe arguments:
   -- [ ...]                   	Provide command for instrumenting after a double dash.
 ```
 ## Building  
-This project has several [dependencies](#dependencies) that are included as submodules. To build these dependencies, you need to call out the location of LLVM on your system.
+This project has several [dependencies](#dependencies) that are included as submodules. By default, logduration builds with ROCm instrumentation support.
+
+Override the default ROCm LLVM search path via `ROCM_PATH`. To build with support for Triton instrumentation, we require you set `TRITON_LLVM`.
 
 ```shell
   git clone https://github.com/AARInternal/logduration.git
@@ -80,12 +82,14 @@ This project has several [dependencies](#dependencies) that are included as subm
   git submodule update --init --recursive
   mkdir build
   cd build
-  cmake -DLLVM_INSTALL_DIR=/llvm/install ..
+  cmake -DTRITON_LLVM=$HOME/.triton/llvm/llvm-a66376b0-ubuntu-x64 ..
   make
+  # Optionally, install the program
+  make install
 ```
 
 > [!TIP]
-> Add the `-DCMAKE_INSTALL_PREFIX` flag to your CMake command to install to a standard location on your system. Don't forget to use `make install`.
+> See [FAQ](#faq) for reccomended Triton installation procedure.
 
 ## Dependencies
 logDuration is now dependent on two other libraries for building, and a third library if you want to use logDuration as part of omniprobe.
@@ -101,3 +105,11 @@ logDuration is now dependent on two other libraries for building, and a third li
 ### [instrument-amdgpu-kernels](https://github.com/CRobeck/instrument-amdgpu-kernels.git)
 > Unlike either dh_comms or kerneldb, instrument-amdgpu-kernel does not get linked into logDuration, but the llvm plugins provided by this library do the instrumentation of GPU kernels
 > that logDuration relies on when running in instrumented mode. For now, when you build instrument-amdgpu-kernels for logDuration, you need to use the dh_comms_submit_address branch.
+
+## FAQ
+
+### How do you recommend I install Triton?
+To build with Triton instrumentation support, we require you provide the path to Triton's LLVM install (`TRITON_LLVM`). We recommend using a virtual Python environment to avoid clobbering your other packages.
+
+1. Follow Triton's ["Install from source"](https://github.com/triton-lang/triton?tab=readme-ov-file#install-from-source) instructions. 
+2. Install PyTorch using their ROCm specific install instructions in their ["Getting started"](https://pytorch.org/get-started/locally/) guide.
