@@ -82,7 +82,7 @@ def capture_subprocess_output(subprocess_args, handler=None, new_env=None):
         # line to read when this function is called
         line = stream.readline()
         buf.write(line)
-        console_warning(line.strip())
+        console_warning(line.rstrip())
 
     if handler == None:
         handler = handle_output
@@ -135,7 +135,7 @@ def get_install_path() -> tuple:
                     elif line.startswith("install_dir="):
                         install_dir = line.strip().split("=")[1]
                     elif line.startswith("triton_llvm="):
-                        triton_llvm = line.strip().split("=")[1]  
+                        triton_llvm = line.strip().split("=")[1]
                     else:
                         print(f"Invalid line in {path}: {line}")
                         sys.exit(1)
@@ -466,6 +466,7 @@ def parse_args():
 def main():
     print("\nOmniprobe is developed by Advanced Micro Devices, Research and Advanced Development")
     print("Copyright (c) 2024 Advanced Micro Devices. All rights reserved.\n")
+    logging.basicConfig(format="%(message)s", level=logging.INFO)
     global analytics_config
     load_config_files()
     parms  = parse_args()
