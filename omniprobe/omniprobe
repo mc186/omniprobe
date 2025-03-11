@@ -180,7 +180,7 @@ def get_local_isa():
 install_path = get_install_path()
 if install_path[0] == "install":
     base_inst_functions_file = os.path.join(install_path[1])
-    base_llvm_pass_plugin = os.path.join(install_path[1], "lib64")
+    base_llvm_pass_plugin = os.path.join(install_path[1], "lib")
     base_hsa_tools_lib = os.path.join(install_path[1], "lib", "logDuration")
 else:
     base_inst_functions_file = os.path.join(install_path[1], "external", "dh_comms")

@@ -98,7 +98,7 @@ else()
 endif()
 
 # Generate a configuration file
-if(DEFINED ENV{TRITON_LLVM})
+if(DEFINED TRITON_LLVM)
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "triton_llvm=true\n")
 else()
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/runtime_config.txt "triton_llvm=false\n")
