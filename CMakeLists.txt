@@ -139,9 +139,11 @@ ext_proj_add(
     NAME dh_comms
     INCLUDE_DIRS
 )
-ext_proj_add(
-    NAME instrument-amdgpu-kernels
-)
+set(LLVM_INSTALL_DIR ${ROCM_PATH}/llvm)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/instrument-amdgpu-kernels ${CMAKE_BINARY_DIR}/external/instrument-rocm)
+
+set(LLVM_INSTALL_DIR ${TRITON_LLVM})
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/instrument-amdgpu-kernels ${CMAKE_BINARY_DIR}/external/instrument-triton)
 
 # Set target and root/lib/test directory
 set(TARGET_NAME "${INTERCEPTOR_TARGET}")
