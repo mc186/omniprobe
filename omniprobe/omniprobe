@@ -184,7 +184,7 @@ if install_path[0] == "install":
     base_hsa_tools_lib = os.path.join(install_path[1], "lib", "logDuration")
 else:
     base_inst_functions_file = os.path.join(install_path[1], "external", "dh_comms")
-    base_llvm_pass_plugin = os.path.join(install_path[1], "external", "instrument-amdgpu-kernels")
+    base_llvm_pass_plugin = os.path.join(install_path[1], "external", "instrument-amdgpu-kernels-triton", "build")
     base_hsa_tools_lib = os.path.join(install_path[1])
 
 #TODO: We need some way of communicating whether the target application is HIP or Triton source
