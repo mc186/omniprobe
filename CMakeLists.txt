@@ -140,10 +140,20 @@ ext_proj_add(
     INCLUDE_DIRS
 )
 set(LLVM_INSTALL_DIR ${ROCM_PATH}/llvm)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/instrument-amdgpu-kernels ${CMAKE_BINARY_DIR}/external/instrument-rocm)
+ext_proj_add(
+    NAME instrument-amdgpu-kernels
+    C_COMPILER ${ROCM_PATH}/llvm/bin/clang
+    CXX_COMPILER ${ROCM_PATH}/llvm/bin/clang++
+    BINARY_SUFFIX "-rocm"
+)
 
 set(LLVM_INSTALL_DIR ${TRITON_LLVM})
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/external/instrument-amdgpu-kernels ${CMAKE_BINARY_DIR}/external/instrument-triton)
+ext_proj_add(
+    NAME instrument-amdgpu-kernels
+    C_COMPILER ${ROCM_PATH}/llvm/bin/clang
+    CXX_COMPILER ${ROCM_PATH}/llvm/bin/clang++
+    BINARY_SUFFIX "-triton"
+)
 
 # Set target and root/lib/test directory
 set(TARGET_NAME "${INTERCEPTOR_TARGET}")
