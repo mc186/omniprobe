@@ -11,6 +11,8 @@ import subprocess
 import logging
 from pathlib import Path
 
+sys.stdout.reconfigure(line_buffering=True)
+
 #LOGDUR_INSTRUMENTED
 #LOGDUR_KERNEL_CACHE
 #HSA_TOOLS_LIB
