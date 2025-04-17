@@ -140,8 +140,7 @@ def get_install_path() -> tuple:
                         sys.exit(1)
             break
 
-    # TODO: handle symlinks properly
-    if os.path.abspath(os.path.join(install_dir, "bin", "logDuration"))  == os.path.abspath(os.path.dirname(__file__)):
+    if os.path.realpath(os.path.join(install_dir, "bin", "logDuration"))  == os.path.realpath(os.path.dirname(__file__)):
         return ("install", install_dir)
     else:
         return ("build", build_dir)
@@ -178,11 +177,9 @@ def get_local_isa():
 
 install_path = get_install_path()
 if install_path[0] == "install":
-    base_inst_functions_file = os.path.join(install_path[1])
     base_llvm_pass_plugin = os.path.join(install_path[1])
     base_hsa_tools_lib = os.path.join(install_path[1], "lib", "logDuration")
 else:
-    base_inst_functions_file = os.path.join(install_path[1], "external", "dh_comms")
     base_llvm_pass_plugin = os.path.join(install_path[1], "external", "instrument-amdgpu-kernels-triton", "build")
     base_hsa_tools_lib = os.path.join(install_path[1])
 
@@ -206,7 +203,6 @@ def validate_triton_config():
     if 'TRITON_HIP_LLD_PATH' not in triton_config or 'LLVM_PASS_PLUGIN_PATH' not in triton_config:
         print("You are missing some required configuration parameters in your triton environment. You need to specify all of the following environment variables:")
         print(f"\tTRITON_HIP_LLD_PATH (usually located whereever rocm is installed (e.g. {get_rocm_path()}/llvm/bin/ld.lld)")
-        print(f"\tAMDCGN_INSTRUMENTATION_FUNCTIONS_FILE (should be located in {base_inst_functions_file}.")
         print(f"\tLLVM_PASS_PLUGIN_PATH (should be located {base_llvm_pass_plugin}")
         return False
     else:
