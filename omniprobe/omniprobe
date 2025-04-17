@@ -171,10 +171,9 @@ def get_local_isa():
 
     capture_subprocess_output(["rocminfo"], handler=handle_isa_output, new_env=None)
     for line in output:
-        if "gfx942" in line:
-            return "gfx942"
-        elif "gfx90a" in line:
-            return "gfx90a"
+        for arch in ["gfx906", "gfx908", "gfx90a", "gfx940", "gfx941", "gfx942"]:
+            if arch in line:
+                return arch
     return None
 
 install_path = get_install_path()
