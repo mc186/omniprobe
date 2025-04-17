@@ -193,6 +193,9 @@ triton_config = {"TRITON_LOGGER_LEVEL": "3",
                  "TRITON_HIP_LLD_PATH": f"{get_rocm_path()}/llvm/bin/ld.lld",
                  "LLVM_PASS_PLUGIN_PATH": os.path.join(base_llvm_pass_plugin, "lib", "libAMDGCNSubmitAddressMessages-triton.so")
                 }
+
+hip_config = {"LLVM_PASS_PLUGIN_PATH": os.path.join(base_llvm_pass_plugin, "lib", "libAMDGCNSubmitAddressMessages-rocm.so")}
+
 config_path = os.path.dirname(__file__) + "/config"
 rocm_path = get_rocm_path()
 
@@ -216,6 +219,18 @@ def validate_triton_config():
             return False
     return True
 
+def validate_hip_config():
+    global hip_config
+    if 'LLVM_PASS_PLUGIN_PATH' not in hip_config:
+        print("You are missing some required configuration parameters in your HIP environment. You need to specify all of the following environment variables:")
+        print(f"\tLLVM_PASS_PLUGIN_PATH (should be located {base_llvm_pass_plugin}")
+        return False
+    else:
+        if not os.path.exists(triton_config['LLVM_PASS_PLUGIN_PATH']):
+            print(f"The file pointed to by LLVM_PASS_PLUGIN_PATH ({triton_config['LLVM_PASS_PLUGIN_PATH']}) is missing")
+            return False
+    return True
+
 def setup_env(parms):
     env_dump = {}
     global op_run_env
@@ -234,8 +249,9 @@ def setup_env(parms):
         env['LOGDUR_LOG_LOCATION'] = "console"
         env_dump['LOGDUR_LOG_LOCATION'] = "console"
 
-
+    assume_triton = False
     if len(parms.cache_location):
+        assume_triton = True
         if os.path.exists(parms.cache_location) and os.path.isdir(parms.cache_location):
             env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
             env_dump['LOGDUR_KERNEL_CACHE'] = parms.cache_location
@@ -257,11 +273,20 @@ def setup_env(parms):
     if parms.instrumented == True:
         env['LOGDUR_INSTRUMENTED'] = "true"
         env_dump['LOGDUR_INSTRUMENTED'] = "true"
-        if triton_llvm == "true":
+        if assume_triton:
+            print("Triton cache location provided; assuming Triton run.")
             if validate_triton_config():
                 for key in triton_config:
                     env[key] = triton_config[key]
                     env_dump[key] = triton_config[key]
+            else:
+                sys.exit(1)
+        else:
+            print("No Triton cache location provided; assuming HIP run.")
+            if validate_hip_config():
+                for key in hip_config:
+                    env[key] = hip_config[key]
+                    env_dump[key] = hip_config[key]
             else:
                 sys.exit(1)
 
