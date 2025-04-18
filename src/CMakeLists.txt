@@ -30,7 +30,6 @@ set ( LIB_SRC
   ${LIB_DIR}/pyHandler.cc
   ${LIB_DIR}/memory_heatmap_wrapper.cc
   ${LIB_DIR}/time_interval_handler_wrapper.cc
-  ${LIB_DIR}/config_receiver.cc
 )
 
 set (HEATMAP_EXAMPLE "example_heatmap")
@@ -117,8 +116,6 @@ target_link_libraries(
     ${DH_COMMS_LIBRARIES}/libdh_comms.so
     kernelDB64
     amd_comgr
-    ssl
-    zmq
 )
 
 add_executable(${STRESSTEST_NAME} ${TEST_SRC})

@@ -151,6 +151,7 @@ set(DEFAULT_PLUGIN_NAME "defaultMessageHandlers64")
 set(DEFAULT_PLUGIN_LIB "lib${DEFAULT_PLUGIN_NAME}")
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(LIB_DIR "${ROOT_DIR}/src")
+set(TEST_DIR "${ROOT_DIR}/test_code")
 set(PLUGIN_DIR "${ROOT_DIR}/plugins")
 
 # Enable tracing API
@@ -161,6 +162,7 @@ endif()
 # Build libraries
 include(${LIB_DIR}/CMakeLists.txt)
 include(${PLUGIN_DIR}/CMakeLists.txt)
+#include(${TEST_DIR}/CMakeLists.txt)
 
 # Set the VERSION and SOVERSION values
 set_property(TARGET ${TARGET_NAME} PROPERTY VERSION "${LIB_VERSION_STRING}")
