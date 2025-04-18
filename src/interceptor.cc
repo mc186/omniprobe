@@ -656,7 +656,7 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     // are packed or not.
     void **comms_loc = (void **)&(((char *)dst)[desc.explicit_args_length  - sizeof(void *)]);
     *comms_loc = comms;
-    dumpKernArgs(dst, src, desc);
+    //dumpKernArgs(dst, src, desc);
 }
 
 /*

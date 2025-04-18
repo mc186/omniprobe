@@ -981,8 +981,8 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                         size_t arg_size = std::stoul(get_metadata_string(parm_size));
                         size_t arg_offset = std::stoul(get_metadata_string(parm_offset));
                         std::string parm_name = get_metadata_string(parm_type);
-                        std::cout << "Name, Offset, Size\n";
-                        std::cout << parm_name << "," << arg_offset << "," << arg_size << std::endl;
+                        //std::cout << "Name, Offset, Size\n";
+                        //std::cout << parm_name << "," << arg_offset << "," << arg_size << std::endl;
                         if (parm_name.rfind("hidden_",0) == 0)
                             desc.hidden_args_length = arg_offset + arg_size;
                         else
