@@ -599,8 +599,8 @@ void dumpKernArgs(void *dst, void *src, arg_descriptor_t desc)
     std::cout << "dumpKernelArgs: Compare 2 segments with largest segment size " << std::dec << desc.kernarg_length << std::endl;
     for(uint32_t i = 0; i < wordcount - 2; i++)
         std::cout << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t *)src)[i] << "\t" << std::setw(8) << std::setfill('0') << ((uint32_t *)dst)[i] <<std::endl;
-    std::cout << "\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 2] << std::endl;
-    std::cout << "\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 1] << std::endl;
+    std::cout << "\t\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 2] << std::endl;
+    std::cout << "\t\t" << std::hex << std::setw(8) << std::setfill('0') << ((uint32_t*)dst)[wordcount - 1] << std::endl;
 }
 
 
@@ -621,9 +621,9 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     // the parameter list of the non-instrumented original is always short one void*
     // relative to the desriptor supplied to this method
     // We want to copy all of the source kernargs except for it's original explicit arguments
-    memcpy(dst, src, (desc.explicit_args_count - 1) * sizeof(uint64_t));
+    memcpy(dst, src, desc.explicit_args_length - sizeof(void *));
     // Compute where we want to copy hidden args. Right after the last explicit argument.
-    void *hidden_args_dst = &(((void **)dst)[desc.explicit_args_count]);
+    void *hidden_args_dst = &(((char *)dst)[desc.explicit_args_length]);
     // We copy from the non-instrumented clone from the location after the last explicit arg in the src.
     // It has 1 fewer arguments than the instrumented clone (i.e. no dh_comms *)
     //void *hidden_args_src = &(((void **)src)[desc.explicit_args_count - 1]);
@@ -635,7 +635,7 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     if (desc.clone_hidden_args_length)
     {
         // assert that we aren't going to copy a larger kernarg segment into a smaller one
-        assert(desc.clone_hidden_args_length <= desc.kernarg_length - (desc.explicit_args_count * sizeof(uint64_t)));
+        assert(desc.clone_hidden_args_length <= desc.kernarg_length - desc.explicit_args_length);
         memcpy(hidden_args_dst, hidden_args_src, desc.clone_hidden_args_length);
     }
     /* The weird thing here is that, apparently, kernel arguments are 64bit aligned
@@ -656,7 +656,7 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
     // are packed or not.
     void **comms_loc = (void **)&(((char *)dst)[desc.explicit_args_length  - sizeof(void *)]);
     *comms_loc = comms;
-   // dumpKernArgs(dst, src, desc);
+    //dumpKernArgs(dst, src, desc);
 }
 
 /*

@@ -28,6 +28,12 @@ THE SOFTWARE.
 using namespace std;
 namespace fs = std::filesystem;
 
+#define ARG_ALIGN 4
+
+size_t roundArgsLength(size_t number) {
+    return ((number + (ARG_ALIGN - 1)) / ARG_ALIGN) * ARG_ALIGN;
+}
+
 
 std::string demangleName(const char *name)
 {
@@ -225,7 +231,8 @@ bool coCache::getArgDescriptor(hsa_agent_t agent, std::string& name, arg_descrip
             {
                 // If there are hidden arguments in the clone, compute how many bytes of kernarg data comprises the hidden kernargs.
                 if (itclone->second.hidden_args_length)
-                    clone_hidden_args_length = itclone->second.kernarg_length - (itclone->second.explicit_args_count * sizeof(void *));;
+                    clone_hidden_args_length = itclone->second.kernarg_length - itclone->second.explicit_args_length;
+                    //clone_hidden_args_length = itclone->second.kernarg_length - (itclone->second.explicit_args_count * sizeof(void *));
             }
 
             strName = getInstrumentedName(name);
@@ -974,8 +981,10 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                         size_t arg_size = std::stoul(get_metadata_string(parm_size));
                         size_t arg_offset = std::stoul(get_metadata_string(parm_offset));
                         std::string parm_name = get_metadata_string(parm_type);
+                        //std::cout << "Name, Offset, Size\n";
+                        //std::cout << parm_name << "," << arg_offset << "," << arg_size << std::endl;
                         if (parm_name.rfind("hidden_",0) == 0)
-                            desc.hidden_args_length += arg_size;
+                            desc.hidden_args_length = arg_offset + arg_size;
                         else
                         {
                             desc.explicit_args_count++;
@@ -984,6 +993,8 @@ void KernelArgHelper::computeKernargData(amd_comgr_metadata_node_t exec_map)
                     }
                 }
             }
+            desc.explicit_args_length = roundArgsLength(desc.explicit_args_length);
+            desc.hidden_args_length = desc.kernarg_length - desc.explicit_args_length;
             kernels_[strName] = desc;
         }
     }
