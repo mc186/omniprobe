@@ -47,7 +47,7 @@ jobs:
           path: ~/llvm-hash.txt
           
       - name: Build Triton
-        timeout-minutes: 35
+        timeout-minutes: 45
         shell: bash
         run: |
           cd ~/triton &&
