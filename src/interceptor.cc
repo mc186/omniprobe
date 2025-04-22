@@ -638,15 +638,15 @@ void hsaInterceptor::fixupKernArgs(void *dst, void *src, void *comms, arg_descri
         assert(desc.clone_hidden_args_length <= desc.kernarg_length - desc.explicit_args_length);
         memcpy(hidden_args_dst, hidden_args_src, desc.clone_hidden_args_length);
     }
-    /* The weird thing here is that, apparently, kernel arguments are 64bit aligned
+    /* The weird thing here is that, apparently, kernel arguments are 4-byteb aligned
      * regardless of the actual argument size. This really bit me working on this code
      * because the metadata on kernel objects that is retrievable from comgr shows argument lengths
      * and at first I was using the argument length to repack the kernel arguments with the 
      * newly inserted void * created by the instrumentation code. But after staring
      * at hex dumps, I realized that all of the kernel arguments (at least the explicit arguments, 
-     * I'm not sure about the hidden arguments) are 64bit aligned regardless of the inherent argument
+     * I'm not sure about the hidden arguments) are 4-byte aligned regardless of the inherent argument
      * size. I don't know how portable this is between code object versions. I'm assuming it is some
-     * aspect of code objecdt first combined with the expecations of the GPU firmware.
+     * aspect of code object first combined with the expecations of the GPU firmware.
      * */
     //void **comms_loc = &(((void **)dst)[desc.explicit_args_count  - 1]);
     // This computation using explicit_args_length is more adaptable to changes in the way the compiler
