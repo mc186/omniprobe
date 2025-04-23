@@ -118,6 +118,17 @@ target_link_libraries(
     amd_comgr
 )
 
+find_path(LIBDWARF_INCLUDE_DIR
+  NAMES libdwarf.h dwarf.h
+  HINTS ${CMAKE_INCLUDE_PATH}
+  PATHS
+    ${CMAKE_INCLUDE_PATH}
+    /usr/include/libdwarf-0
+    /usr/include/libdwarf
+    /usr/local/include/libdwarf-0
+    /usr/local/include/libdwarf
+  DOC "Path to libdwarf header files")
+
 add_executable(${STRESSTEST_NAME} ${TEST_SRC})
 
 set_source_files_properties(${TEST_SRC} PROPERTIES LANGUAGE HIP)
@@ -141,6 +152,7 @@ target_include_directories (
     ${ROOT_DIR}
     ${HSA_RUNTIME_INC_PATH}
     ${DH_COMMS_INCLUDE_DIR}
+    ${LIBDWARF_INCLUDE_DIR}
 )
 target_link_options (
     ${STRESSTEST_NAME}
@@ -172,6 +184,7 @@ target_include_directories (
     ${CMAKE_INSTALL_PREFIX}/include
     ${HSA_RUNTIME_INC_PATH}
     ${DH_COMMS_INCLUDE_DIR}
+    ${LIBDWARF_INCLUDE_DIR}
 )
 target_link_options (
     ${HEATMAP_EXAMPLE}
