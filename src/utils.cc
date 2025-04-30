@@ -28,7 +28,7 @@ THE SOFTWARE.
 using namespace std;
 namespace fs = std::filesystem;
 
-#define ARG_ALIGN 4
+#define ARG_ALIGN 8
 
 size_t roundArgsLength(size_t number) {
     return ((number + (ARG_ALIGN - 1)) / ARG_ALIGN) * ARG_ALIGN;
