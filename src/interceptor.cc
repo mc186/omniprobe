@@ -434,10 +434,13 @@ void cache_watcher()
                                     stat(event->name, &path_stat);
                                     std::string strNewDirectory = dir;
                                     strNewDirectory += event->name;
+                                    //cerr << "Creating: " << strNewDirectory << std::endl;
                                     if (S_ISDIR(path_stat.st_mode)) {
-                                        int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+                                        int wd = inotify_add_watch(fd, strNewDirectory.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
                                         if (wd != -1)
                                             watch_map[wd] = event->name;
+                                      //  else
+                                        //    cerr << "ERROR: Trying to watch " << strNewDirectory << std::endl;
                                     }
                                     else if (strNewDirectory.ends_with(".hsaco"))
                                     {
@@ -455,7 +458,7 @@ void cache_watcher()
                                 }
                                 else if (event->mask & IN_MOVED_FROM)
                                 {
-                                    //printf("The file %s was moved out of directory %s.\n", event->name, dir);
+                                    //printf("The file %s was moved out of directory %s.\n", event->name, dir.c_str());
                                 }
                                 else if (event->mask & IN_MOVED_TO)
                                 {
@@ -464,12 +467,11 @@ void cache_watcher()
                                     strFileName += event->name;
                                     if (strFileName.ends_with(".hsaco"))
                                     {
-                                        //cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
+                                      //  cerr << "I CAN SEE JITTED CODE OBJECT " << strFileName << std::endl;
                                         me->addCodeObject(strFileName);                                        
                                     }
                                     //else
                                     //    cerr << "The file/directory " << event->name << " was moved to directory " << watch_map[event->wd] << std::endl;
-                                    //printf("The file %s was moved into directory %s.\n", event->name, dir);
                                 }
                             }
 
