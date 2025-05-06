@@ -1,7 +1,7 @@
 # logduration
 
-[![Ubuntu 22.04 (w/ ROCm LLVM)](https://github.com/AARInternal/logduration/actions/workflows/ubuntu-jammy-rocm.yml/badge.svg)](https://github.com/AARInternal/logduration/actions/workflows/ubuntu-jammy-rocm.yml)
-[![Ubuntu 22.04 (w/ Triton LLVM)](https://github.com/AARInternal/logduration/actions/workflows/ubuntu-jammy-triton.yml/badge.svg)](https://github.com/AARInternal/logduration/actions/workflows/ubuntu-jammy-triton.yml)
+[![Ubuntu Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml)
+[![RedHat Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml)
 
 logduration is a project that originally started simply to provide a quick and easy way to observe all kernel
 durations within an application, without having to run the profiler and be saddled with all of the application
