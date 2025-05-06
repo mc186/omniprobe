@@ -139,7 +139,6 @@ ext_proj_add(
     NAME dh_comms
     INCLUDE_DIRS
 )
-set(LLVM_INSTALL_DIR ${ROCM_PATH}/llvm)
 ext_proj_add(
     NAME instrument-amdgpu-kernels
     C_COMPILER ${ROCM_PATH}/llvm/bin/clang
@@ -147,13 +146,15 @@ ext_proj_add(
     BINARY_SUFFIX "-rocm"
 )
 
-set(LLVM_INSTALL_DIR ${TRITON_LLVM})
-ext_proj_add(
-    NAME instrument-amdgpu-kernels
-    C_COMPILER ${ROCM_PATH}/llvm/bin/clang
-    CXX_COMPILER ${ROCM_PATH}/llvm/bin/clang++
-    BINARY_SUFFIX "-triton"
-)
+if(DEFINED TRITON_LLVM)
+    set(LLVM_INSTALL_DIR ${TRITON_LLVM})
+    ext_proj_add(
+        NAME instrument-amdgpu-kernels
+        C_COMPILER ${ROCM_PATH}/llvm/bin/clang
+        CXX_COMPILER ${ROCM_PATH}/llvm/bin/clang++
+        BINARY_SUFFIX "-triton"
+    )
+endif()
 
 # Set target and root/lib/test directory
 set(TARGET_NAME "${INTERCEPTOR_TARGET}")
