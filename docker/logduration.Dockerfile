@@ -46,8 +46,15 @@ ENV PATH=/app/triton/.venv/bin:${PATH}
 # =========================
 # logduration install
 # =========================
-RUN cd /app && \
-    --mount=type=ssh git clone git@github.com:AMDResearch/logduration.git && \
+RUN mkdir -p ~/.ssh && \
+    touch ~/.ssh/known_hosts && \
+    ssh-keyscan github.com >> ~/.ssh/known_hosts && \
+    chmod 700 ~/.ssh && \
+    chmod 644 ~/.ssh/known_hosts
+
+RUN --mount=type=ssh \
+    cd /app && \
+    git clone git@github.com:AMDResearch/logduration.git && \
     cd logduration && \
     git submodule update --init --recursive && \
     mkdir -p /opt/logduration && \
@@ -55,6 +62,8 @@ RUN cd /app && \
     mkdir -p build && \
     cmake -DCMAKE_INSTALL_PREFIX=/opt/logduration -DCMAKE_PREFIX_PATH=${ROCM_PATH} -DTRITON_LLVM=${TRITON_LLVM} -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -S . -B build && \
     cmake --build build --target install
+
+ENV PATH=/opt/logduration/bin/logDuration:${PATH}
 
 # Set the default command to run when the container starts
 CMD ["bash"]
