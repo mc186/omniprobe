@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cassert>
+#include <set>
 #include "inc/basic_block_analysis.h"
 
 uint32_t countSetBits(uint64_t mask) {
@@ -38,6 +39,9 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
         auto& instructions = kdb.getInstructionsForLine(kernel, hdr.dwarf_line);
         if (instructions.size())
         {
+            std::set<kernelDB::basicBlock *> blocks;
+            for (auto& in : instructions)
+                blocks.insert(in.block_);
             auto wsit = wave_states_.find(wave);
             if (wsit != wave_states_.end())
             {
@@ -53,7 +57,10 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 }
                 // Need to check for s_endpgm and clean up wave state here
                 if (instructions[instructions.size() - 1].inst_ == "s_endpgm")
+                {
+                    std::cerr << "BLOCK: Ending Wave\n";
                     wave_states_.erase(wsit);
+                }
                 else
                 {
                     wsit->second.current_block_ = instructions[0].block_;
@@ -65,11 +72,12 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 wave_states_[wave] = {instructions[0].block_, hdr.timestamp, 1};
             }
         }
-        for (auto inst : instructions)
-            std::cout << inst.inst_ << std::endl;
+        //for (auto inst : instructions)
+        //    std::cout << inst.inst_ << std::endl;
     }
     catch (std::runtime_error e)
     {
+        std::cerr << e.what() << std::endl;
         return false;
     }
     return bReturn;
@@ -87,7 +95,17 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         std::vector<uint32_t> lines;
         kdb.getKernelLines(kernel_name, lines);
     }
-    report();
+
+    std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
+    auto it = block_info_.begin();
+    while (it != block_info_.end())
+    {
+        auto instructions = it->first->getInstructions();
+        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
+            << "," << it->second.count_ << std::endl;
+        
+        it++;
+    }
 }
 
 void basic_block_analysis::report()
