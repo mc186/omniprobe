@@ -51,14 +51,19 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 {
                     block_info_[wsit->second.current_block_] = {hdr.timestamp - wsit->second.start_time_,1};
                 }
-                wsit->second.current_block_ = instructions[0].block_;
-                wsit->second.start_time_ = hdr.timestamp;
+                // Need to check for s_endpgm and clean up wave state here
+                if (instructions[instructions.size() - 1].inst_ == "s_endpgm")
+                    wave_states_.erase(wsit);
+                else
+                {
+                    wsit->second.current_block_ = instructions[0].block_;
+                    wsit->second.start_time_ = hdr.timestamp;
+                }
             }
             else
             {
                 wave_states_[wave] = {instructions[0].block_, hdr.timestamp, 1};
             }
-            // Need to check for s_endpgm and clean up wave state here
         }
         for (auto inst : instructions)
             std::cout << inst.inst_ << std::endl;
