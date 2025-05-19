@@ -38,6 +38,45 @@ e.g. HSA_TOOLS_LIB=./build/liblogdur64.so ./src/test/quicktest
 - LOGDUR_DISPATCHES=all
 - LOGDUR_INSTRUMENTED=true
 - LOGDUR_HANDLERS=\<Message Handler for processing messages from instrumented kernels.\> e.g. libLogMessages64.so
+
+## Building  
+
+### Quick start (container)
+
+We provide containerized execution environments for users to get started with logduration right away. Leverage the [`docker/build.sh`](docker/build.sh) script to build a container image with the latest version of logduration and its dependencies. Use the `--docker` and/or `--apptainer` flags to build the image for your preferred container runtime.
+
+Example:
+```shell
+cd docker
+# Build apptainer AND docker images
+build.sh --apptainer --docker
+# Launch apptainer container
+apptainer exec logduration.sif bash
+# Launch docker container
+docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined <image-id> bash
+```
+
+### Build from source
+
+This project has several [dependencies](#dependencies) that are included as submodules. By default, logduration builds with ROCm instrumentation support.
+
+Override the default ROCm LLVM search path via `ROCM_PATH`. To build with support for Triton instrumentation, we require you set `TRITON_LLVM`.
+
+```shell
+git clone https://github.com/AARInternal/logduration.git
+cd logduration
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DTRITON_LLVM=$HOME/.triton/llvm/llvm-a66376b0-ubuntu-x64 ..
+make
+# Optionally, install the program
+make install
+```
+
+> [!TIP]
+> See [FAQ](#faq) for reccomended Triton installation procedure.
+
 ## omniprobe
 ```
 Omniprobe is developed by Advanced Micro Devices, Research and Advanced Development
@@ -71,45 +110,23 @@ General omniprobe arguments:
                                 shared library that implements an omniprobe message handler.
   -- [ ...]                   	Provide command for instrumenting after a double dash.
 ```
-## Building  
-This project has several [dependencies](#dependencies) that are included as submodules. By default, logduration builds with ROCm instrumentation support.
-
-Override the default ROCm LLVM search path via `ROCM_PATH`. To build with support for Triton instrumentation, we require you set `TRITON_LLVM`.
-
-```shell
-  git clone https://github.com/AARInternal/logduration.git
-  cd logduration
-  git submodule update --init --recursive
-  mkdir build
-  cd build
-  cmake -DTRITON_LLVM=$HOME/.triton/llvm/llvm-a66376b0-ubuntu-x64 ..
-  make
-  # Optionally, install the program
-  make install
-```
-
-> [!TIP]
-> See [FAQ](#faq) for reccomended Triton installation procedure.
 
 ## Dependencies
 logDuration is now dependent on two other libraries for building, and a third library if you want to use logDuration as part of omniprobe.
-### [kerneldb](https://github.com/AARInternal/kerneldb.git)
+### [kerneldb](https://github.com/AMDResearch/kerneldb)
 > kernelDB provides support for query kernel codes from HSA code objects. This can be an important capability for processing instrumented kernel output.
 > The omniprobe memory efficiency analyzer relies on this because sometimes code optimizations are made downstream in the compiler from where instrumentation
 > occurred. And proper analysis of, say, memory traces requires understanding how the code may have been optimized (e.g. ganging together individual loads into dwordx4)
 
-### [dh_comms](https://github.com/AARInternal/dh_comms.git)
+### [dh_comms](https://github.com/AMDResearch/dh_comms)
 > dh_comms provides buffered I/O functionality for propagating messages from instrumented kernels to host code for consuming and analyzing messages from instrumented code at runtime.
 > Because logDuration can run in either instrumented or non-instrumented mode, dh_comms functionality needs to be built into logDuration.
 > 
-### [instrument-amdgpu-kernels](https://github.com/CRobeck/instrument-amdgpu-kernels.git)
+### [instrument-amdgpu-kernels](https://github.com/AMDResearch/instrument-amdgpu-kernels)
 > Unlike either dh_comms or kerneldb, instrument-amdgpu-kernel does not get linked into logDuration, but the llvm plugins provided by this library do the instrumentation of GPU kernels
 > that logDuration relies on when running in instrumented mode. For now, when you build instrument-amdgpu-kernels for logDuration, you need to use the dh_comms_submit_address branch.
 
 ## FAQ
 
 ### How do you recommend I install Triton?
-To build with Triton instrumentation support, we require you provide the path to Triton's LLVM install (`TRITON_LLVM`). We recommend using a virtual Python environment to avoid clobbering your other packages.
-
-1. Follow Triton's ["Install from source"](https://github.com/triton-lang/triton?tab=readme-ov-file#install-from-source) instructions. 
-2. Install PyTorch using their ROCm specific install instructions in their ["Getting started"](https://pytorch.org/get-started/locally/) guide.
+To build with Triton instrumentation support, we require you provide the path to Triton's LLVM install (`TRITON_LLVM`). We recommend using a virtual Python environment to avoid clobbering your other packages. See [`docker/triton_install.sh`](docker/triton_install.sh) for creating this virtual environment automatically. 
