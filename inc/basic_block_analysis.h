@@ -2,6 +2,7 @@
 #include "dh_comms.h"
 #include "message_handlers.h"
 #include "kernelDB.h"
+#include <set>
 
 typedef struct {
     uint64_t count_;
@@ -56,5 +57,6 @@ private:
     std::map<waveIdentifier_t,wave_state_t, wave_cmp<waveIdentifier_t>> wave_states_;
     std::map<kernelDB::basicBlock *, blockInfo_t> block_info_;
     std::map<kernelDB::basicBlock *, uint64_t> block_timings_;
+    std::set<kernelDB::basicBlock *> blocks_seen_;
 
 };

@@ -592,6 +592,14 @@ void logDuration::log(std::string& kernelName, uint64_t dispatchTime, uint64_t s
         cerr << "Can't find anyplace to log\n";
 }
 
+void logDuration::logHeaders()
+{
+    if (log_file_)
+        *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
+    else
+        std::cerr << "Unable to log headers - not log location set\n";
+}
+
 bool logDuration::setLocation(const std::string& strLocation)
 {
     if (location_ != "console")
@@ -607,7 +615,6 @@ bool logDuration::setLocation(const std::string& strLocation)
         log_file_ = &cout;
     else
         log_file_ = new std::ofstream(location_, std::ios::app);
-    *log_file_ << "kernel,dispatch,startNs,endNs" << std::endl;
     return log_file_ != NULL;
 }
 

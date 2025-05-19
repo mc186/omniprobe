@@ -41,7 +41,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
         {
             std::set<kernelDB::basicBlock *> blocks;
             for (auto& in : instructions)
-                blocks.insert(in.block_);
+                blocks_seen_.insert(in.block_);
             auto wsit = wave_states_.find(wave);
             if (wsit != wave_states_.end())
             {
@@ -90,12 +90,6 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message)
 
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
-    if (kernel_name.length() == 0)
-    {
-        std::vector<uint32_t> lines;
-        kdb.getKernelLines(kernel_name, lines);
-    }
-
     std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
     auto it = block_info_.begin();
     while (it != block_info_.end())
@@ -106,6 +100,8 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         
         it++;
     }
+    for (auto& block : blocks_seen_)
+        std::cerr << "\tBLOCK: " << block << std::endl;
 }
 
 void basic_block_analysis::report()

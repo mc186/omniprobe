@@ -198,6 +198,7 @@ public:
     ~logDuration();
     void log(std::string& kernelName, uint64_t dispatchTime, uint64_t startNs, uint64_t endNs);
     bool setLocation(const std::string& strLocation);
+    void logHeaders();
 private:
     std::ostream *log_file_;
     std::string location_;

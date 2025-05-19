@@ -154,6 +154,8 @@ hsaInterceptor::hsaInterceptor(HsaApiTable* table, uint64_t runtime_version, uin
     }
     else
         run_instrumented_ = false;
+    if (!run_instrumented_)
+        log_.logHeaders();
     //kernel_cache_.setLocation(config_["LOGDUR_KERNEL_CACHE"]);
     for (int i = 0; i < SIGPOOL_INCREMENT; i++)
     {
@@ -319,7 +321,8 @@ void hsaInterceptor::signalCompleted(const hsa_signal_t sig)
         auto startNs = this_time.start;
         auto endNs = this_time.end;
         auto dispatchNs = ki.th_.getStartTime();
-        log_.log(ki.name_, dispatchNs, startNs, endNs);
+        if (!run_instrumented_)
+            log_.log(ki.name_, dispatchNs, startNs, endNs);
         //cerr << "Elapsed micro seconds with all the host overhead: " << std::dec << ki.th_.getElapsedMicros() << " us\n";
         //cerr << "\tMeasured kernel duration: " << endNs - startNs << " ns\n";
         // Reinitialize signal value to 1 for use in next dispatch.
