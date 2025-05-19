@@ -40,11 +40,11 @@ pushd "$script_dir"
   
 if [ "$build_docker" = true ]; then
     echo "Building Docker container..."
-
+    
     # Auto-configure SSH agent
     if [ ! -S ~/.ssh/ssh_auth_sock ]; then
-        eval "$(ssh-agent)" > /dev/null
-        ln -sf "$SSH_AUTH_SOCK" ~/.ssh/ssh_auth_sock
+      eval "$(ssh-agent)" > /dev/null
+      ln -sf "$SSH_AUTH_SOCK" ~/.ssh/ssh_auth_sock
     fi
     export SSH_AUTH_SOCK=~/.ssh/ssh_auth_sock
 
@@ -75,7 +75,8 @@ if [ "$build_apptainer" = true ]; then
     fi
 
     # Build the Apptainer container
-    apptainer build "${name}.sif" "$script_dir/logduration.def"
+    apptainer build \
+      "${name}.sif" "$script_dir/logduration.def"
 
     echo "Apptainer build complete!"
 fi
