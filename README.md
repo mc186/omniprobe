@@ -63,15 +63,15 @@ This project has several [dependencies](#dependencies) that are included as subm
 Override the default ROCm LLVM search path via `ROCM_PATH`. To build with support for Triton instrumentation, we require you set `TRITON_LLVM`.
 
 ```shell
-  git clone https://github.com/AARInternal/logduration.git
-  cd logduration
-  git submodule update --init --recursive
-  mkdir build
-  cd build
-  cmake -DTRITON_LLVM=$HOME/.triton/llvm/llvm-a66376b0-ubuntu-x64 ..
-  make
-  # Optionally, install the program
-  make install
+git clone https://github.com/AARInternal/logduration.git
+cd logduration
+git submodule update --init --recursive
+mkdir build
+cd build
+cmake -DTRITON_LLVM=$HOME/.triton/llvm/llvm-a66376b0-ubuntu-x64 ..
+make
+# Optionally, install the program
+make install
 ```
 
 > [!TIP]
