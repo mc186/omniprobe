@@ -132,6 +132,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
             }
             else
             {
+                //assert(ti.stop - ti.start != 0);
                 block_info_[thisBlock] = {1, ti.stop - ti.start};
             }
             auto wsit = wave_states_.find(wave);
@@ -176,9 +177,18 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
     auto it = block_info_.begin();
     while (it != block_info_.end())
     {
+        std::vector<std::string> isa, files;
         auto instructions = it->first->getInstructions();
+        for (auto inst : instructions)
+        {
+            isa.push_back(inst.inst_);
+            files.push_back(kdb.getFileName(kernel_name, inst.path_id_));
+        }
         std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
             << "," << it->second.count_ << std::endl;
+
+        printVectorsSideBySide(isa, files);
+
         
         it++;
     }
