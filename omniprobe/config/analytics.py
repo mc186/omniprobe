@@ -18,6 +18,7 @@
         "name": "BasicBlockAnalysis",
         "description": "Analyze memory access efficiency",
         "lib_name": "libBasicBlocks64.so",
-        "llvm_plugin": "libAMDGCNSubmitBBStart-triton.so" 
+        "llvm_plugin": "libAMDGCNSubmitBBInterval-triton.so"
+        #"llvm_plugin": "libAMDGCNSubmitBBStart-triton.so" 
     }
 ]
