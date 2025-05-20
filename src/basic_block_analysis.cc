@@ -104,15 +104,8 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
     auto hdr = message.wave_header();
     waveIdentifier_t wave = {hdr.block_idx_x, hdr.block_idx_y, hdr.block_idx_z, hdr.wave_num};
 
-    if (hdr.user_type != dh_comms::message_type::time_interval) {
-      if (verbose_) {
-        printf("basic_block_analysis: skipping message with user type 0x%x\n", hdr.user_type);
-      }
-      return false;
-    }
     try
     {
-        dh_comms::time_interval ti = *(const dh_comms::time_interval *)message.data_item(0);
         uint32_t block_idx = hdr.user_data;
         auto& thisKernel = kdb.getKernel(kernel);
         const auto& blocks = thisKernel.getBasicBlocks();
@@ -125,38 +118,60 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
             for (auto& in : instructions)
                 blocks_seen_.insert(in.block_);
             auto biit = block_info_.find(thisBlock);
-            if (biit != block_info_.end())
+    //        std::cout << "Message Type: " << hdr.user_type << std::endl;
+            if (hdr.user_type == dh_comms::message_type::time_interval)
             {
-                biit->second.count_++;
-                biit->second.duration_ += ti.stop - ti.start;
-            }
-            else
-            {
-                //assert(ti.stop - ti.start != 0);
-                block_info_[thisBlock] = {1, ti.stop - ti.start};
-            }
-            auto wsit = wave_states_.find(wave);
-            if (wsit != wave_states_.end())
-            {
-                // Need to check for s_endpgm and clean up wave state here
-                if (instructions[instructions.size() - 1].inst_ == "s_endpgm")
+                dh_comms::time_interval ti = *(const dh_comms::time_interval *)message.data_item(0);
+                if (biit != block_info_.end())
                 {
-                    //std::cerr << "BLOCK: Ending Wave\n";
-                    wave_states_.erase(wsit);
+                    biit->second.count_++;
+                    biit->second.duration_ += ti.stop - ti.start;
                 }
                 else
                 {
-                    wsit->second.current_block_ = instructions[0].block_;
-                    wsit->second.start_time_ = hdr.timestamp;
+                    //assert(ti.stop - ti.start != 0);
+                    block_info_[thisBlock] = {1, ti.stop - ti.start};
                 }
             }
             else
             {
-                wave_states_[wave] = {instructions[0].block_, hdr.timestamp, 1};
+                auto wsit = wave_states_.find(wave);
+                // If we have a state cached for this wave, use that data to update the block
+                // count and duration
+                // Otherwise, just set the wave state
+                if (wsit != wave_states_.end())
+                {
+                    // If we have seen this block already
+                    // increment the count and add the current duration 
+                    // otherwise, just set the count to 1 and set the duration.
+                    biit = block_info_.find(wsit->second.current_block_);
+                    if (biit != block_info_.end())
+                    {
+                        biit->second.count_+=1;
+                        biit->second.duration_ += hdr.timestamp - wsit->second.start_time_;
+                    }
+                    else
+                    {
+                        block_info_[wsit->second.current_block_] = {1, hdr.timestamp - wsit->second.start_time_};
+                    }
+                    
+                    // Need to check for s_endpgm and clean up wave state here
+                    if (instructions[instructions.size() - 1].inst_ == "s_endpgm")
+                    {
+                        wave_states_.erase(wsit);
+                    }
+                    else
+                    {
+                        wsit->second.current_block_ = thisBlock;
+                        wsit->second.start_time_ = hdr.timestamp;
+                    }
+                }
+                else
+                {
+                    wave_states_[wave] = {thisBlock, hdr.timestamp, 1};
+                }
             }
         }
-        //for (auto inst : instructions)
-        //    std::cout << inst.inst_ << std::endl;
     }
     catch (std::runtime_error e)
     {
@@ -181,7 +196,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         auto instructions = it->first->getInstructions();
         for (auto inst : instructions)
         {
-            isa.push_back(inst.inst_);
+            isa.push_back(inst.disassembly_);
             files.push_back(kdb.getFileName(kernel_name, inst.path_id_));
         }
         std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
