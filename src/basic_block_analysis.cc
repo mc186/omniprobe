@@ -1,3 +1,24 @@
+/******************************************************************************
+Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*******************************************************************************/
 #include <iostream>
 #include <sstream>
 #include <cassert>
@@ -207,6 +228,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message)
 
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
+    std::map<std::string, uint64_t> inst_counts;
     std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
     std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
     auto it = block_info_.begin();
@@ -218,7 +240,15 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         {
             isa.push_back(inst.disassembly_);
             files.push_back(kdb.getFileName(kernel_name, inst.path_id_));
+            auto ic = inst_counts.find(inst.inst_);
+            if (ic != inst_counts.end())
+                ic->second += it->second.count_;
+            else
+                inst_counts[inst.inst_] = it->second.count_;
         }
+        std::cerr << "Instruction Counts" << std::endl;
+        for (auto& thisCount : inst_counts)
+            std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
         std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
             << "," << it->second.count_ << std::endl;
 
