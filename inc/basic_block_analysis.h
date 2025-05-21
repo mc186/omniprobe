@@ -21,7 +21,7 @@ struct wave_cmp
 {
     bool operator() (const T& first, const T& second) const
     {
-        return memcmp(&first, &second, sizeof(T));
+        return memcmp(&first, &second, sizeof(T)) < 0;
     }
 };
 
@@ -51,6 +51,7 @@ private:
     size_t no_intervals_;
     bool verbose_;
     std::string strKernel_;
+    uint64_t message_count_;
     uint64_t dispatch_id_;
     kernelDB::basicBlock *current_block_;
     uint64_t start_time_;

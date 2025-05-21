@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <cassert>
 #include <set>
 #include "inc/basic_block_analysis.h"
@@ -92,15 +93,25 @@ basic_block_analysis::basic_block_analysis(const std::string& strKernel, uint64_
       current_block_(nullptr),
       start_time_(0)
 {
+    message_count_ = 0;
 }
+
 
 basic_block_analysis::~basic_block_analysis()
 {
 }
 
+std::string wave_identifier_to_string(waveIdentifier_t& wave)
+{
+    std::stringstream ss;
+    ss << "(" << wave.block_x_ << "," << wave.block_y_ << "," << wave.block_z_ << ":" << (uint32_t)wave.wave_id_ << ")";
+    return ss.str();
+}
+
 bool basic_block_analysis::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
     bool bReturn = true;
+    message_count_++;
     auto hdr = message.wave_header();
     waveIdentifier_t wave = {hdr.block_idx_x, hdr.block_idx_y, hdr.block_idx_z, hdr.wave_num};
 
@@ -121,6 +132,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
     //        std::cout << "Message Type: " << hdr.user_type << std::endl;
             if (hdr.user_type == dh_comms::message_type::time_interval)
             {
+                assert(false); // Should not be getting here
                 dh_comms::time_interval ti = *(const dh_comms::time_interval *)message.data_item(0);
                 if (biit != block_info_.end())
                 {
@@ -147,31 +159,38 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                     biit = block_info_.find(wsit->second.current_block_);
                     if (biit != block_info_.end())
                     {
-                        biit->second.count_+=1;
+                        //std::cerr << "Message count: " << message_count_ << " on block update -- " << wave_identifier_to_string(wave) << std::endl;
+                        biit->second.count_+= wsit->second.count_;
                         biit->second.duration_ += hdr.timestamp - wsit->second.start_time_;
                     }
                     else
                     {
+                        //std::cerr << "Message count: " << message_count_ << " on block add -- " << wave_identifier_to_string(wave) << std::endl;
                         block_info_[wsit->second.current_block_] = {1, hdr.timestamp - wsit->second.start_time_};
                     }
                     
                     // Need to check for s_endpgm and clean up wave state here
                     if (instructions[instructions.size() - 1].inst_ == "s_endpgm")
                     {
+                        //std::cerr << "End Wave -- " << wave_identifier_to_string(wave) << std::endl;
                         wave_states_.erase(wsit);
                     }
                     else
                     {
                         wsit->second.current_block_ = thisBlock;
                         wsit->second.start_time_ = hdr.timestamp;
+                        wsit->second.count_ = 1;
                     }
                 }
                 else
                 {
+                    //std::cerr << "New wave - " << wave_identifier_to_string(wave) << std::endl;
                     wave_states_[wave] = {thisBlock, hdr.timestamp, 1};
                 }
             }
         }
+        else
+            std::cerr << "No instructions for block id " << block_idx << std::endl;
     }
     catch (std::runtime_error e)
     {
@@ -189,6 +208,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message)
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
     std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
+    std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
     auto it = block_info_.begin();
     while (it != block_info_.end())
     {
@@ -202,7 +222,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
             << "," << it->second.count_ << std::endl;
 
-        printVectorsSideBySide(isa, files);
+//        printVectorsSideBySide(isa, files);
 
         
         it++;
