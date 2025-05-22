@@ -141,6 +141,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
         uint32_t block_idx = hdr.user_data;
         auto& thisKernel = kdb.getKernel(kernel);
         const auto& blocks = thisKernel.getBasicBlocks();
+        //std::cerr << blocks.size() << " for kernel " << kernel << " with block_idx == " << block_idx << std::endl;
         assert(block_idx < blocks.size());
         kernelDB::basicBlock *thisBlock = blocks[block_idx].get();
         auto& instructions = thisBlock->getInstructions();
