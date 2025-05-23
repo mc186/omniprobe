@@ -25,6 +25,7 @@ THE SOFTWARE.
 #include "message_handlers.h"
 #include "kernelDB.h"
 #include <set>
+#include <atomic>
 
 typedef struct {
     uint64_t thread_count_;
@@ -82,5 +83,6 @@ private:
     std::map<kernelDB::basicBlock *, blockInfo_t> block_info_;
     std::map<kernelDB::basicBlock *, uint64_t> block_timings_;
     std::set<kernelDB::basicBlock *> blocks_seen_;
+    static std::atomic<bool> banner_displayed_;
 
 };

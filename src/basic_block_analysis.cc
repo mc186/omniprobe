@@ -31,6 +31,8 @@ THE SOFTWARE.
 #include <stdexcept>
 #include <algorithm>
 
+std::atomic<bool> basic_block_analysis::banner_displayed_ = false;
+
 double calculatePercentile(std::vector<double>& data, double percentile) {
     if (data.empty()) return 0.0;
     size_t n = data.size();
@@ -254,8 +256,12 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message)
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
     std::map<std::string, uint64_t> inst_counts;
-    std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
-    std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
+    bool first_time = false, initialized = true;
+    if (banner_displayed_.compare_exchange_strong(first_time, initialized))
+    {
+        std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
+        std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
+    }
     auto it = block_info_.begin();
     uint64_t duration = 0;
     uint64_t block_exec_count = 0;
