@@ -27,6 +27,7 @@ THE SOFTWARE.
 #include <set>
 
 typedef struct {
+    uint64_t thread_count_;
     uint64_t count_;
     uint64_t duration_;
 }blockInfo_t;

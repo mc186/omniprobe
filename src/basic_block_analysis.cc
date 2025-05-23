@@ -29,6 +29,28 @@ THE SOFTWARE.
 #include <fstream>
 #include <cstdint>
 #include <stdexcept>
+#include <algorithm>
+
+double calculatePercentile(std::vector<double>& data, double percentile) {
+    if (data.empty()) return 0.0;
+    size_t n = data.size();
+
+    // Sort the vector
+    std::sort(data.begin(), data.end());
+
+    // Calculate index for the percentile
+    double index = percentile * (n - 1);
+    size_t lower = static_cast<size_t>(index);
+    double fraction = index - lower;
+
+    // If index is exact, return the value
+    if (fraction == 0.0) {
+        return data[lower];
+    }
+
+    // Linear interpolation between lower and upper elements
+    return data[lower] + fraction * (data[lower + 1] - data[lower]);
+}
 
 std::vector<std::string> readFileLines(const std::string& filename, uint32_t startLine, uint32_t endLine) {
     std::vector<std::string> lines;
@@ -159,12 +181,13 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 if (biit != block_info_.end())
                 {
                     biit->second.count_++;
+                    biit->second.thread_count_ += countSetBits(hdr.exec);
                     biit->second.duration_ += ti.stop - ti.start;
                 }
                 else
                 {
                     //assert(ti.stop - ti.start != 0);
-                    block_info_[thisBlock] = {1, ti.stop - ti.start};
+                    block_info_[thisBlock] = {countSetBits(hdr.exec), 1, ti.stop - ti.start};
                 }
             }
             else
@@ -183,12 +206,13 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                     {
                         //std::cerr << "Message count: " << message_count_ << " on block update -- " << wave_identifier_to_string(wave) << std::endl;
                         biit->second.count_+= wsit->second.count_;
+                        biit->second.thread_count_ += countSetBits(hdr.exec);
                         biit->second.duration_ += hdr.timestamp - wsit->second.start_time_;
                     }
                     else
                     {
                         //std::cerr << "Message count: " << message_count_ << " on block add -- " << wave_identifier_to_string(wave) << std::endl;
-                        block_info_[wsit->second.current_block_] = {1, hdr.timestamp - wsit->second.start_time_};
+                        block_info_[wsit->second.current_block_] = {countSetBits(hdr.exec), 1, hdr.timestamp - wsit->second.start_time_};
                     }
                     
                     // Need to check for s_endpgm and clean up wave state here
@@ -233,8 +257,22 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
     std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
     std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
     auto it = block_info_.begin();
+    uint64_t duration = 0;
+    uint64_t block_exec_count = 0;
+    uint64_t thread_exec_count = 0;
     while (it != block_info_.end())
     {
+        duration += it->second.duration_;
+        block_exec_count += it->second.count_;
+        thread_exec_count += it->second.thread_count_;
+        it++;
+    }
+    std::cerr << "Kernel Compute Saturation: " << (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)) << std::endl;
+    std::cerr << "Start Line, End Line, Duration, FileName, Compute Saturation, Overhead, Count\n";
+    it = block_info_.begin();
+    while (it != block_info_.end())
+    {
+        //std::cerr << "Compute Saturation: " << (double)((double)it->second.thread_count_ / (double)(it->second.count_ * 64)) << std::endl;
         std::vector<std::string> isa, files;
         auto instructions = it->first->getInstructions();
         for (auto inst : instructions)
@@ -245,13 +283,25 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             if (ic != inst_counts.end())
                 ic->second += it->second.count_;
             else
-                inst_counts[inst.inst_] = it->second.count_;
+            {
+                if (inst.inst_.starts_with("v_"))
+                    inst_counts[inst.inst_] = it->second.thread_count_;
+                else
+                    inst_counts[inst.inst_] = it->second.count_;
+            }
         }
-        std::cerr << "Instruction Counts" << std::endl;
-        for (auto& thisCount : inst_counts)
-            std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
-        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) 
+        //std::cerr << "Instruction Counts" << std::endl;
+        //for (auto& thisCount : inst_counts)
+        //    std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
+        try
+        {
+        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) << "," <<  (double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0)) << "," << (double)((double) it->second.duration_ / (double) duration) 
             << "," << it->second.count_ << std::endl;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << e.what() << std::endl;
+        }
 
 //        printVectorsSideBySide(isa, files);
 
