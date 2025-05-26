@@ -61,6 +61,7 @@ class basic_block_analysis : public dh_comms::message_handler_base
 public:
     basic_block_analysis(const std::string& strKernel, uint64_t dispatch_id, std::string& strLocation, bool verbose = false);
     basic_block_analysis(const basic_block_analysis &) = default;
+    void setupLogger();
     virtual ~basic_block_analysis();
     virtual bool handle(const dh_comms::message_t &message) override;
     virtual bool handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb) override;
@@ -83,6 +84,8 @@ private:
     std::map<kernelDB::basicBlock *, blockInfo_t> block_info_;
     std::map<kernelDB::basicBlock *, uint64_t> block_timings_;
     std::set<kernelDB::basicBlock *> blocks_seen_;
+    std::string location_;
+    std::ostream *log_file_;
     static std::atomic<bool> banner_displayed_;
 
 };

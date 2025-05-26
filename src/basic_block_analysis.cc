@@ -136,7 +136,8 @@ basic_block_analysis::basic_block_analysis(const std::string& strKernel, uint64_
       strKernel_(strKernel),
       dispatch_id_(dispatch_id),
       current_block_(nullptr),
-      start_time_(0)
+      start_time_(0),
+      location_(strLocation)
 {
     message_count_ = 0;
 }
@@ -253,10 +254,19 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message)
     return true;
 }
 
+void basic_block_analysis::setupLogger()
+{
+    if (location_ == "console")
+        log_file_ = &std::cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
+}
+
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
     std::map<std::string, uint64_t> inst_counts;
     bool first_time = false, initialized = true;
+    setupLogger();
     if (banner_displayed_.compare_exchange_strong(first_time, initialized))
         std::cerr << "omniprobe basic block analysis for kernel\n";
     auto it = block_info_.begin();
@@ -270,14 +280,13 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         thread_exec_count += it->second.thread_count_;
         it++;
     }
-    std::cerr << "Kernel: " << strKernel_ << std::endl;
-    std::cerr << "Dispatch: " << dispatch_id_ << std::endl;
-    std::cerr << "Branchiness: " << 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0))) << std::endl;
-    std::cerr << "Start Line, End Line, Duration, FileName, Branchiness, Overhead, Count\n";
+    *log_file_ << "Kernel: " << strKernel_ << std::endl;
+    *log_file_ << "Dispatch: " << dispatch_id_ << std::endl;
+    *log_file_ << "Branchiness: " << 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0))) << std::endl;
+    *log_file_  << "Start Line, End Line, Duration, FileName, Branchiness, Overhead, Count\n";
     it = block_info_.begin();
     while (it != block_info_.end())
     {
-        //std::cerr << "Compute Saturation: " << (double)((double)it->second.thread_count_ / (double)(it->second.count_ * 64)) << std::endl;
         std::vector<std::string> isa, files;
         auto instructions = it->first->getInstructions();
         for (auto inst : instructions)
@@ -300,7 +309,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         //    std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
         try
         {
-        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) << "," <<  1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0))) << "," << (double)((double) it->second.duration_ / (double) duration) 
+        *log_file_ << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) << "," <<  1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0))) << "," << (double)((double) it->second.duration_ / (double) duration) 
             << "," << it->second.count_ << std::endl;
         }
         catch (const std::exception& e)
@@ -310,7 +319,8 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
 
 //        printVectorsSideBySide(isa, files);
 
-        
+        if (location_ != "console")
+            delete log_file_;
         it++;
     }
 }
