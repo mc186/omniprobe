@@ -258,10 +258,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
     std::map<std::string, uint64_t> inst_counts;
     bool first_time = false, initialized = true;
     if (banner_displayed_.compare_exchange_strong(first_time, initialized))
-    {
-        std::cerr << "omniprobe basic block analysis for kernel " << strKernel_ << "[" << dispatch_id_ << "]\n";
-        std::cerr << "basic block analysis for kernel message_count_ == " << message_count_ << std::endl;
-    }
+        std::cerr << "omniprobe basic block analysis for kernel\n";
     auto it = block_info_.begin();
     uint64_t duration = 0;
     uint64_t block_exec_count = 0;
@@ -273,8 +270,10 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         thread_exec_count += it->second.thread_count_;
         it++;
     }
-    std::cerr << "Kernel Compute Saturation: " << (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)) << std::endl;
-    std::cerr << "Start Line, End Line, Duration, FileName, Compute Saturation, Overhead, Count\n";
+    std::cerr << "Kernel: " << strKernel_ << std::endl;
+    std::cerr << "Dispatch: " << dispatch_id_ << std::endl;
+    std::cerr << "Branchiness: " << 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0))) << std::endl;
+    std::cerr << "Start Line, End Line, Duration, FileName, Branchiness, Overhead, Count\n";
     it = block_info_.begin();
     while (it != block_info_.end())
     {
@@ -301,7 +300,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         //    std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
         try
         {
-        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) << "," <<  (double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0)) << "," << (double)((double) it->second.duration_ / (double) duration) 
+        std::cerr << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << kdb.getFileName(kernel_name, instructions[0].path_id_) << "," <<  1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0))) << "," << (double)((double) it->second.duration_ / (double) duration) 
             << "," << it->second.count_ << std::endl;
         }
         catch (const std::exception& e)
