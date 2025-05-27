@@ -31,6 +31,7 @@ typedef struct {
     uint64_t thread_count_;
     uint64_t count_;
     uint64_t duration_;
+    uint32_t dwarf_line_;
 }blockInfo_t;
 
 typedef struct {

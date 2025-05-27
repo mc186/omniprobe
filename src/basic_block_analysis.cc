@@ -190,7 +190,7 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 else
                 {
                     //assert(ti.stop - ti.start != 0);
-                    block_info_[thisBlock] = {countSetBits(hdr.exec), 1, ti.stop - ti.start};
+                    block_info_[thisBlock] = {countSetBits(hdr.exec), 1, ti.stop - ti.start, hdr.dwarf_line};
                 }
             }
             else
