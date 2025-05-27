@@ -251,6 +251,19 @@ def setup_env(parms):
     global op_run_env
     global triton_llvm
     env = os.environ
+
+    if len(parms.log_format):
+        parms.log_format = parms.log_format.lower();
+        if parms.log_format == "csv" or parms.log_format == "json":
+            env['LOGDUR_LOG_FORMAT'] = parms.log_format
+            env_dump['LOGDUR_LOG_FORMAT'] = parms.log_format
+        else:
+            print(f"WARNING: log format {parms.log_format} is not valid. Defaulting to 'csv'")
+            parms.log_format = "csv"
+            env['LOGDUR_LOG_FORMAT'] = parms.log_format
+            env_dump['LOGDUR_LOG_FORMAT'] = parms.log_format
+
+            
     if len(parms.log_location):
         if parms.log_location != "console":
             if not os.path.isdir(parms.log_location):
@@ -442,6 +455,18 @@ def add_general_group(parser):
         default="",
         help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
     )
+    
+    general_group.add_argument (
+        "-t",
+        "--log-format",
+        type=str,
+        metavar="",
+        dest="log_format",
+        required=False,
+        default="csv",
+        help="\tThe format for logging results. Default is 'csv'. Valid options: [csv|json]"
+    )
+
 
     general_group.add_argument (
         "-l",
