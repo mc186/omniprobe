@@ -76,6 +76,32 @@ void renderJSON(std::map<std::string, T>& fields, std::iostream& out, bool omitF
     }
 }
 
+template <typename T>
+void renderJSON(std::vector<std::pair<std::string, T>>& fields, std::iostream& out, bool omitFinalComma, bool valueAsString)
+{
+    if (valueAsString) {
+        auto it = fields.begin();
+        while (it != fields.end())
+        {
+            out << "\"" << it->first << "\": \"" << it->second << "\"";
+            it++;
+            if (it != fields.end() || !omitFinalComma)
+                out << ",";
+        }
+    }
+    else
+    {
+        auto it = fields.begin();
+        while (it != fields.end())
+        {
+            out << "\"" << it->first << "\": " << it->second;
+            it++;
+            if (it != fields.end() || !omitFinalComma)
+                out << ",";
+        }
+    }
+}
+
 typedef struct {
     kernelDB::basicBlock *current_block_;
     uint64_t start_time_;

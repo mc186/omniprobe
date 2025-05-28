@@ -327,8 +327,12 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
                     inst_counts[inst.inst_] = it->second.count_;
             }
         }
+        std::vector<std::pair<std::string, uint64_t>> inst_results(inst_counts.begin(), inst_counts.end());
+        std::sort(inst_results.begin(), inst_results.end(), [](const auto& a, const auto& b) {
+            return b.second < a.second;});
+
         //std::cerr << "Instruction Counts" << std::endl;
-        //for (auto& thisCount : inst_counts)
+        //for (auto& thisCount : inst_results)
         //    std::cerr << "\t" << thisCount.first << ":" << thisCount.second << std::endl;
         std::stringstream ss;
         try
@@ -358,7 +362,10 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             {
                 renderJSON(strings, ss, false);
                 renderJSON(bigints, ss, false);
-                renderJSON(doubles, ss, true);
+                renderJSON(doubles, ss, false);
+                ss << "\"instructions\": {";
+                renderJSON(inst_results, ss, true, false);
+                ss << "}";
                 ss << "}\n";
                 *log_file_ << ss.str();
             }
