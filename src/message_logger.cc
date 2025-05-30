@@ -11,15 +11,25 @@ message_logger_t::message_logger_t(const std::string& strKernel, uint64_t dispat
     : strKernel_(strKernel),
       dispatch_id_(dispatch_id),
       location_(location),
-      verbose_(verbose)
+      verbose_(verbose),
+      format_csv_(true)
 {
     location_ = location;
     if (location == "console")
         log_file_ = &std::cout;
     else
         log_file_ = new std::ofstream(location, std::ios::app);
+    
+    const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
+    if (logDurLogFormat)
+    {
+        std::string strFormat = logDurLogFormat;
+        if (strFormat == "json")
+            format_csv_ = false;
+    }
 
-    *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,kind,address" << std::endl;
+    if (format_csv_)
+        *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,kind,address" << std::endl;
 }
 
 message_logger_t::~message_logger_t()
@@ -29,24 +39,31 @@ message_logger_t::~message_logger_t()
 }
 bool message_logger_t::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
-    std::cout << kernel << std::endl;
+    JSONHelper json;
     dh_comms::wave_header_t hdr = message.wave_header();
+    printf("message_logger_t::handle\n");
+    switch(hdr.user_type)
+    {
+        case dh_comms::message_type::address:
+            handle_header(message, json);
+            handle_address_message(message, json);
+            *log_file_ << json.getJSON() << std::endl;
+            break;
+        case dh_comms::message_type::time_interval:
+            break;
+        default:
+            handle_header(message, json);
+            *log_file_ << json.getJSON() << std::endl;
+            break;
+    }
     if (message.wave_header().user_type != dh_comms::message_type::address)
         return false;
-    try
-    {
-    auto instructions = kdb.getInstructionsForLine(kernel,hdr.dwarf_line);
-    for (auto inst : instructions)
-        std::cout << inst.inst_ << std::endl;
-    }
-    catch (std::runtime_error e)
-    {
-    }
     return handle(message);
 }
 
 bool message_logger_t::handle(const dh_comms::message_t &message)
 {
+    auto hdr = message.wave_header();
     if (message.wave_header().user_type != dh_comms::message_type::address)
     {
         if (verbose_)
@@ -56,9 +73,6 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
         return false;
     }
     assert(message.data_item_size() == sizeof(uint64_t));
-
-    dh_comms::wave_header_t hdr = message.wave_header();
-
 
 
     *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
@@ -81,6 +95,76 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
             *log_file_ << std::endl;
     }
     return true;
+}
+    
+bool message_logger_t::handle_address_message(const dh_comms::message_t& message, JSONHelper& json)
+{
+    auto hdr = message.wave_header();
+    if (message.wave_header().user_type != dh_comms::message_type::address)
+    {
+        if (verbose_)
+        {
+            printf("message_logger: skipping message with user type 0x%x\n", message.wave_header().user_type);
+        }
+        return false;
+    }
+    assert(message.data_item_size() == sizeof(uint64_t));
+
+    if (format_csv_)
+    {
+        *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
+
+
+        *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
+        *log_file_ << (hdr.user_data & 0b11) << ",";
+        for (size_t i = 0; i != message.no_data_items(); ++i)
+        {
+            uint64_t address = *(const uint64_t *)message.data_item(i);
+            if (verbose_)
+            {
+                //printf("memory_heatmap: added address 0x%lx to map\n", address);
+            }
+
+            *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << address;
+            if (i < message.no_data_items() - 1)
+                *log_file_ << ",";
+            else
+                *log_file_ << std::endl;
+        }
+    }
+    else
+    {
+        std::vector<uint64_t> addrs;
+        for (size_t i = 0; i != message.no_data_items(); ++i)
+            addrs.push_back( *(const uint64_t *)message.data_item(i));
+        if (addrs.size())
+            json.addVector("addresses", addrs, false, true);
+
+    }
+    return true;
+}
+
+bool message_logger_t::handle_timeinterval_message(const dh_comms::message_t& message, JSONHelper& json)
+{
+    return true;
+}
+
+void message_logger_t::handle_header(const dh_comms::message_t& message, JSONHelper& json)
+{
+    auto hdr = message.wave_header();
+    json.addField("exec", hdr.exec, false, true);
+    json.addField("timestamp", hdr.timestamp);
+    json.addField("dwarf_line", hdr.dwarf_line);
+    json.addField("dwarf_column", hdr.dwarf_column);
+    json.addField("block_idx_x", hdr.block_idx_x);
+    json.addField("block_idx_y", hdr.block_idx_y);
+    json.addField("block_idx_z", hdr.block_idx_z);
+    json.addField("wave_num", ((uint16_t)hdr.wave_num));
+    json.addField("xcc_id", ((uint16_t)hdr.xcc_id));
+    json.addField("se_id", ((uint16_t)hdr.se_id));
+    json.addField("cu_id", ((uint16_t)hdr.cu_id));
+    json.addField("active_lane_count", (uint16_t)hdr.active_lane_count);
+    return;
 }
 
 void message_logger_t::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)

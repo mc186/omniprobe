@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include <iostream>
 #include <fstream>
 #include "message_handlers.h"
+#include "json_helpers.h"
 
 class message_logger_t : public dh_comms::message_handler_base
 {
@@ -38,12 +39,16 @@ public:
     virtual void report() override;
     virtual void report(const std::string& kernel_name, kernelDB::kernelDB& kdb) override;
     virtual void clear() override;
+    bool handle_address_message(const dh_comms::message_t& message, JSONHelper& json);
+    bool handle_timeinterval_message(const dh_comms::message_t& message, JSONHelper& json);
+    void handle_header(const dh_comms::message_t& message, JSONHelper& json);
 
 private:
     std::string strKernel_;
     uint64_t dispatch_id_;
     std::string location_;
     bool verbose_;
+    bool format_csv_;
     std::ostream *log_file_;
     // out iostream here
 };

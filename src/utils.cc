@@ -1060,7 +1060,11 @@ bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
     {
         void *handle = dlopen(lib.c_str(),RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE);
         if (!handle)
+        {
+            std::cerr << "dlopen failed: " <<  dlerror() << std::endl;
             std::cerr << "ERROR: " << errno << " while trying to load " << lib << std::endl;
+            exit(1);
+        }
         else
         {
             getMessageHandlers_t func = reinterpret_cast<getMessageHandlers_t>(dlsym(handle, "getMessageHandlers"));

@@ -35,6 +35,7 @@ set ( DEFAULT_PLUGIN_SRC
 
 set (LOGGER_PLUGIN_SRC
   ${LIB_DIR}/message_logger.cc
+  ${LIB_DIR}/json_helpers.cc
   ${PLUGIN_DIR}/logger_plugin.cc
 )
 
