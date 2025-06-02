@@ -346,7 +346,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             doubles["Kernel_Branchiness"] = 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)));
             bigints["Block_Start_Line"] = instructions[0].line_;
             bigints["Block_End_Line"] = instructions[instructions.size() - 1].line_;
-            bigints["Kernel_Duration"] = it->second.duration_;
+            bigints["Block_Duration"] = it->second.duration_;
             strings["Kernel_File_Name"] = kdb.getFileName(kernel_name, instructions[0].path_id_);
             doubles["Block_Branchiness"] = 1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0)));
             doubles["Block_Overhead"] = (double)((double) it->second.duration_ / (double) duration);
