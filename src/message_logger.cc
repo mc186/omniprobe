@@ -63,7 +63,6 @@ bool message_logger_t::handle(const dh_comms::message_t &message, const std::str
 {
     JSONHelper json;
     dh_comms::wave_header_t hdr = message.wave_header();
-    printf("message_logger_t::handle\n");
     switch(hdr.user_type)
     {
         case dh_comms::message_type::address:

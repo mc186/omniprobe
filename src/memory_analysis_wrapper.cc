@@ -56,7 +56,7 @@ void memory_analysis_wrapper_t::report(const std::string& kernel_name, kernelDB:
         std::vector<uint32_t> lines;
         kdb.getKernelLines(kernel_name, lines);
     }
-    report();
+    wrapped_.report();
 }
 
 void memory_analysis_wrapper_t::report() {

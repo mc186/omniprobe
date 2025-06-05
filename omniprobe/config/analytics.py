@@ -3,6 +3,7 @@
         "name": "MessageLogger",
         "description": "Log raw instrumentation messages",
         "lib_name": "libLogMessages64.so",
+        #"llvm_plugin": "libAMDGCNSubmitBBStart-triton.so" 
     },
     {
         "name": "Heatmap",
