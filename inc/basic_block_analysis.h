@@ -41,6 +41,12 @@ typedef struct {
     uint8_t wave_id_;
 }waveIdentifier_t;
 
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+    uint16_t z;
+}workgroup_id_t;
+
 template<typename T>
 struct wave_cmp
 {
@@ -121,7 +127,8 @@ public:
     virtual void report(const std::string& kernel_name, kernelDB::kernelDB& kdb) override;
     virtual void report() override;
     virtual void clear() override;
-
+    void updateComputeResources(dh_comms::wave_header_t& hdr);
+    void printComputeResources(std::ostream& out, const std::string& format);
 private:
     uint64_t first_start_;
     uint64_t last_stop_;
@@ -137,6 +144,8 @@ private:
     std::map<kernelDB::basicBlock *, blockInfo_t> block_info_;
     std::map<kernelDB::basicBlock *, uint64_t> block_timings_;
     std::set<kernelDB::basicBlock *> blocks_seen_;
+    // key is xcc,                se               key is cu                                    wave                  
+    std::map<uint16_t, std::map<uint16_t, std::map<uint16_t, std::map<workgroup_id_t, std::set<uint16_t>, wave_cmp<workgroup_id_t>>>>> compute_resources_;
     std::string location_;
     std::ostream *log_file_;
     static std::atomic<bool> banner_displayed_;

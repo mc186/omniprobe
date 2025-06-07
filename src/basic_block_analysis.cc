@@ -154,12 +154,65 @@ std::string wave_identifier_to_string(waveIdentifier_t& wave)
     return ss.str();
 }
 
+void basic_block_analysis::updateComputeResources(dh_comms::wave_header_t& hdr)
+{
+    workgroup_id_t wg = {hdr.block_idx_x, hdr.block_idx_y, hdr.block_idx_z};
+    auto it = compute_resources_.find(hdr.xcc_id);
+    if (it != compute_resources_.end())
+    {
+        auto jit = it->second.find(hdr.se_id);
+        if (jit == it->second.end())
+            it->second[hdr.se_id][hdr.cu_id][wg] = {hdr.wave_num};
+        else
+        {
+            auto kit = jit->second.find(hdr.cu_id);
+            if (kit == jit->second.end())
+                jit->second[hdr.cu_id][wg] = {hdr.wave_num};
+            else
+            {
+                auto mit = kit->second.find(wg);
+                if (mit == kit->second.end())
+                    kit->second[wg] = {hdr.wave_num};
+                else
+                    mit->second.insert(hdr.wave_num);
+            }
+        }
+    }
+    else
+    {
+        compute_resources_[hdr.xcc_id][hdr.se_id][hdr.cu_id][wg] = {hdr.wave_num};
+    }
+}
+    
+void basic_block_analysis::printComputeResources(std::ostream& out, const std::string& format)
+{
+    for (const auto& xccs : compute_resources_)
+    {
+        out << "XCC[" << xccs.first << "]:\n";
+        for (const auto& ses : xccs.second)
+        {
+            out << "\tSE[" << ses.first << "]:\n";
+            for (const auto& cus : ses.second)
+            {
+                out << "\t\tCU[" << cus.first << "]:\n";
+                for (const auto& wgs : cus.second)
+                {
+                    out << "\t\t\tWG[" << wgs.first.x << "," << wgs.first.y << "," << wgs.first.z << "]:\n";
+                    out << "\t\t\t\tWave Count: " << wgs.second.size() << std::endl;
+                }
+            }
+        }
+    }
+}
+
+
 bool basic_block_analysis::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
     bool bReturn = true;
     message_count_++;
     auto hdr = message.wave_header();
     waveIdentifier_t wave = {hdr.block_idx_x, hdr.block_idx_y, hdr.block_idx_z, hdr.wave_num};
+    updateComputeResources(hdr);
 
     try
     {
@@ -265,6 +318,7 @@ void basic_block_analysis::setupLogger()
 void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
     bool bFormatCsv = true;
+    //printComputeResources(std::cout, "json");
     const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
     if (logDurLogFormat)
     {
