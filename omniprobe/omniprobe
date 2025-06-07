@@ -398,38 +398,19 @@ def add_general_group(parser):
     for rec in analytics_config.keys():
         names.append(analytics_config[rec]['name'])
 
+    default_handlers = [os.path.join(install_path[1], "lib", "libdefaultMessageHandlers64.so")] if install_path[0] == "install" else [os.path.join(install_path[1], "libdefaultMessageHandlers64.so")]
     general_group.add_argument (
-        "-v",
-        "--verbose",
-        action="store_true",
-        dest="verbose",
-        required=False,
-        default=False,
-        help="\tVerbose output"
-    )
-    '''
-    general_group.add_argument (
-        "-t",
-        "--type",
+        "-a",
+        "--analyzers",
         type=str,
         metavar="",
-        dest="type",
+        dest="handlers",
         required=False,
-        default="memorytrace",
-        help="\tSpecify the type of instrumentation to run"
+        nargs='+',
+        default=default_handlers,
+        help=f"\tThe analyzer(s) to use for processing data being streamed from instrumented kernels. \n\tValid values are {names} or a reference to any shared library that implements an omniprobe message handler.\n"
     )
-    '''
-
-    general_group.add_argument (
-        "-k",
-        "--kernels",
-        type=str,
-        metavar="",
-        dest="kernels",
-        required=False,
-        default="",
-        help="\tKernel filters to define which kernels are instrumented. Valid ECMAScript regular expressions are supported. (cf. https://cplusplus.com/reference/regex/ECMAScript/)"
-    )
+    
     general_group.add_argument (
         "-i",
         "--instrumented",
@@ -441,31 +422,7 @@ def add_general_group(parser):
         default=False,
         help="\tRun instrumented kernels"
     )
-
-    general_group.add_argument (
-        "-e",
-        "--env-dump",
-        type=bool,
-        action=argparse.BooleanOptionalAction,
-        metavar="",
-        dest="dump_env",
-        required=False,
-        default=False,
-        help="\tDump all the environment variables for running liblogDuration64.so."
-    )
-
-
-    general_group.add_argument (
-        "-d",
-        "--dispatches",
-        type=str,
-        metavar="",
-        dest="dispatches",
-        required=False,
-        default="all",
-        help="\tThe dispatches for which to capture instrumentation output. This only applies when running with --instrumented.  Valid options: [all, random, 1]"
-    )
-
+    
     general_group.add_argument (
         "-c",
         "--cache-location",
@@ -475,6 +432,28 @@ def add_general_group(parser):
         required=False,
         default="",
         help="\tThe location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache"
+    )
+    
+    general_group.add_argument (
+        "-k",
+        "--kernels",
+        type=str,
+        metavar="",
+        dest="kernels",
+        required=False,
+        default="",
+        help="\tKernel filters to define which kernels are instrumented. Valid ECMAScript regular expressions are supported. (cf. https://cplusplus.com/reference/regex/ECMAScript/)"
+    )
+    
+    general_group.add_argument (
+        "-d",
+        "--dispatches",
+        type=str,
+        metavar="",
+        dest="dispatches",
+        required=False,
+        default="all",
+        help="\tThe dispatches for which to capture instrumentation output. This only applies when running with --instrumented.  Valid options: [all, random, 1]"
     )
     
     general_group.add_argument (
@@ -499,19 +478,30 @@ def add_general_group(parser):
         default="console",
         help="\tThe location where all of your data should be logged. By default it will be to the console."
     )
-
-    default_handlers = [os.path.join(install_path[1], "lib", "libdefaultMessageHandlers64.so")] if install_path[0] == "install" else [os.path.join(install_path[1], "libdefaultMessageHandlers64.so")]
+    
     general_group.add_argument (
-        "-a",
-        "--analyzers",
-        type=str,
-        metavar="",
-        dest="handlers",
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
         required=False,
-        nargs='+',
-        default=default_handlers,
-        help=f"\tThe analyzer(s) to use for processing data being streamed from instrumented kernels. \n\tValid values are {names} or a reference to any shared library that implements an omniprobe message handler.\n"
+        default=False,
+        help="\tVerbose output"
     )
+
+
+    general_group.add_argument (
+        "-e",
+        "--env-dump",
+        type=bool,
+        action=argparse.BooleanOptionalAction,
+        metavar="",
+        dest="dump_env",
+        required=False,
+        default=False,
+        help="\tDump all the environment variables that are set by omniprobe. This is useful for debugging,\n\tor when you want to use this tool in a context in which running this command-line interface doesn't really work."
+    )
+
 
     general_group.add_argument(
         "remaining",
