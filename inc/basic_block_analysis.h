@@ -129,6 +129,7 @@ public:
     virtual void clear() override;
     void updateComputeResources(dh_comms::wave_header_t& hdr);
     void printComputeResources(std::ostream& out, const std::string& format);
+    void renderComputeResources(std::ostream& out, const std::string& format);
 private:
     uint64_t first_start_;
     uint64_t last_stop_;

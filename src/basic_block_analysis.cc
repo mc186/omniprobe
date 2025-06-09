@@ -205,6 +205,53 @@ void basic_block_analysis::printComputeResources(std::ostream& out, const std::s
     }
 }
 
+void basic_block_analysis::renderComputeResources(std::ostream& out, const std::string& format)
+{
+    std::stringstream ss;
+    std::string tmpss;
+    ss << "{\"kernel\": \"" << strKernel_ << "\", " << "\"dispatch\": " << dispatch_id_ << ", "; 
+    ss << "\"resources\":[";
+    for (const auto& xccs : compute_resources_)
+    {
+        ss << "{\"xcc_" << xccs.first << "\": [";
+        for (const auto& ses : xccs.second)
+        {
+            ss << "{\"se_" << ses.first << "\": [";
+            for (const auto& cus : ses.second)
+            {
+                size_t total_waves = 0;
+                ss << "{\"cu_" << cus.first << "\": [";
+                for (const auto& wgs : cus.second)
+                {
+                    ss << "\"(" << wgs.first.x << "," << wgs.first.y << "," << wgs.first.z << ")\",";
+                    total_waves += wgs.second.size();
+                }
+                tmpss = ss.str();
+                tmpss.pop_back();
+                ss.str(tmpss);// Remove the last comma
+                ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
+                ss << "],";
+                ss << "\"waves_per_workgroup\": " << total_waves / cus.second.size() << "},";
+            }
+            tmpss = ss.str();
+            tmpss.pop_back();
+            ss.str(tmpss);// Remove the last comma
+            ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
+            ss << "]},";
+        }
+        tmpss = ss.str();
+        tmpss.pop_back();
+        ss.str(tmpss);// Remove the last comma
+        ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
+        ss << "]},";
+    }
+    tmpss = ss.str();
+    tmpss.pop_back();
+    ss.str(tmpss);// Remove the last comma
+    ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
+    ss << "]}";
+    out << ss.str();
+}
 
 bool basic_block_analysis::handle(const dh_comms::message_t &message, const std::string& kernel, kernelDB::kernelDB& kdb)
 {
@@ -319,6 +366,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
 {
     bool bFormatCsv = true;
     //printComputeResources(std::cout, "json");
+    renderComputeResources(std::cout, "json");
     const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
     if (logDurLogFormat)
     {
