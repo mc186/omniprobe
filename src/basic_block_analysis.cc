@@ -231,7 +231,7 @@ void basic_block_analysis::renderComputeResources(std::ostream& out, const std::
                 ss.str(tmpss);// Remove the last comma
                 ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
                 ss << "],";
-                ss << "\"waves_per_workgroup\": " << total_waves / cus.second.size() << "},";
+                ss << "\"avg_wave_count\": " << total_waves / cus.second.size() << "},";
             }
             tmpss = ss.str();
             tmpss.pop_back();
@@ -249,7 +249,7 @@ void basic_block_analysis::renderComputeResources(std::ostream& out, const std::
     tmpss.pop_back();
     ss.str(tmpss);// Remove the last comma
     ss.seekp(0, std::ios::end);//Moving the seek pointer to the end so we keep appending
-    ss << "]}";
+    ss << "]}\n";
     out << ss.str();
 }
 
@@ -366,7 +366,6 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
 {
     bool bFormatCsv = true;
     //printComputeResources(std::cout, "json");
-    renderComputeResources(std::cout, "json");
     const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
     if (logDurLogFormat)
     {
@@ -377,6 +376,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
     std::map<std::string, uint64_t> inst_counts;
     bool first_time = false, initialized = true;
     setupLogger();
+    renderComputeResources(*log_file_, "json");
     if (banner_displayed_.compare_exchange_strong(first_time, initialized))
         std::cerr << "omniprobe basic block analysis for kernel\n";
     auto it = block_info_.begin();
