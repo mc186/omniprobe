@@ -309,6 +309,7 @@ def setup_env(parms):
                 os.makedirs(parms.cache_location)
                 env['LOGDUR_KERNEL_CACHE'] = parms.cache_location
                 env_dump['LOGDUR_KERNEL_CACHE'] = parms.cache_location
+                print(f"WARNING: {parms.cache_location} was created but Triton may not use this location for its code object cache. Be sure that {parms.cache_location} is really the right location")
             except OSError as e:
                 print(f"WARNING: Cache location {parms.cache_location} could not be created. Will use only instrumented kernels found in the application binary.")
                 print(e)

@@ -443,16 +443,16 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             strings.clear();
             bigints.clear();
             doubles.clear();
-            strings["Kernel"] = strKernel_;
-            bigints["Dispatch"] = dispatch_id_;
-            doubles["Kernel_Branchiness"] = 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)));
-            bigints["Block_Start_Line"] = instructions[0].line_;
-            bigints["Block_End_Line"] = instructions[instructions.size() - 1].line_;
-            bigints["Block_Duration"] = it->second.duration_;
-            strings["Kernel_File_Name"] = kdb.getFileName(kernel_name, instructions[0].path_id_);
-            doubles["Block_Branchiness"] = 1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0)));
-            doubles["Block_Overhead"] = (double)((double) it->second.duration_ / (double) duration);
-            doubles["Block_Count"] = it->second.count_;
+            strings["kernel"] = strKernel_;
+            bigints["dispatch_d"] = dispatch_id_;
+            doubles["kernel_branchiness"] = 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)));
+            bigints["block_start_line"] = instructions[0].line_;
+            bigints["block_end_line"] = instructions[instructions.size() - 1].line_;
+            bigints["block_duration"] = it->second.duration_;
+            strings["kernel_file_name"] = kdb.getFileName(kernel_name, instructions[0].path_id_);
+            doubles["block_branchiness"] = 1.0 - ((double) ((double)it->second.thread_count_  / ((double) it->second.count_ * 64.0)));
+            doubles["block_overhead"] = (double)((double) it->second.duration_ / (double) duration);
+            doubles["block_count"] = it->second.count_;
             if (bFormatCsv)
             {
                 *log_file_ << instructions[0].line_ << "," << instructions[instructions.size() - 1].line_ << "," << it->second.duration_ << "," << 
