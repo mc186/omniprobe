@@ -22,6 +22,8 @@
 
 cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
+set(CMAKE_PREFIX_PATH "${CMAKE_PREFIX_PATH};/opt/rocm/lib/cmake")
+
 # Install prefix
 set(CMAKE_INSTALL_PREFIX "/" CACHE PATH "Install path prefix default")
 
@@ -44,7 +46,7 @@ if(DEFINED ENV{ROCM_PATH})
     set(ROCM_PATH $ENV{ROCM_PATH})
 else()
     # Set a default value if ROCM_PATH is not set
-    set(ROCM_PATH "/opt/rocm")
+    set(ROCM_PATH "/opt/rocm/lib")
 endif()
 
 message("ROCM_PATH: ${ROCM_PATH}")

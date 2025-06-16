@@ -371,16 +371,16 @@ void cache_watcher()
             perror("inotify_init");
             exit(EXIT_FAILURE);
         }
-
-        for (const auto& entry : fs::directory_iterator(dir)) 
+        auto files = util_get_directory_files(dir, true);
+        for (const auto& entry : files) 
         {
-            if (entry.is_directory()) 
+            if (util_is_directory(entry)) 
             {
-                int wd = inotify_add_watch(fd, entry.path().string().c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
+                int wd = inotify_add_watch(fd, entry.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
                 if (wd != -1)
                 {
-                    watch_map[wd] = entry.path().string();
-                    //cerr << "Added " << entry.path().string() << " to watch list\n";
+                    watch_map[wd] = entry;
+                    cerr << "Added " << " to watch list\n";
                 }
             }
         }

@@ -28,12 +28,66 @@ THE SOFTWARE.
 using namespace std;
 namespace fs = std::filesystem;
 
+
 #define ARG_ALIGN 8
 
 size_t roundArgsLength(size_t number) {
     return ((number + (ARG_ALIGN - 1)) / ARG_ALIGN) * ARG_ALIGN;
 }
 
+bool util_ends_with_substring(const std::string& str, const std::string& suffix) {
+    if (suffix.size() > str.size()) return false;
+    return str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0;
+}
+
+std::vector<std::string> util_get_directory_files(const std::string& path, bool includeDirectories /*=false*/) {
+    std::vector<std::string> files;
+
+    if (!util_is_directory(path)) {
+        return files; // Return empty vector if not a directory
+    }
+
+    DIR* dir = opendir(path.c_str());
+    if (!dir) {
+        return files; // Return empty vector if directory can't be opened
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir))) {
+        // Skip "." and ".." entries
+        if (std::string(entry->d_name) == "." || std::string(entry->d_name) == "..") {
+            continue;
+        }
+
+        // Construct full path to check file type
+        std::string full_path = path;
+        if (!util_ends_with_substring(full_path, "/")) {
+            full_path += "/";
+        }
+        full_path += entry->d_name;
+
+        struct stat info;
+        if (stat(full_path.c_str(), &info) == 0)
+        {
+            if(info.st_mode & S_IFREG) {
+                files.push_back(entry->d_name);
+            }
+            if(info.st_mode & S_IFDIR && includeDirectories)
+                files.push_back(entry->d_name);
+        }
+    }
+
+    closedir(dir);
+    return files;
+}
+
+bool util_is_directory(const std::string& path) {
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        return false; // Path doesn't exist or is inaccessible
+    }
+    return (info.st_mode & S_IFDIR) != 0;
+}
 
 std::string demangleName(const char *name)
 {
@@ -423,12 +477,13 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, const
     if (directory.length())
     {
         location_ = directory;
-        if (std::filesystem::is_directory(directory))
+        if (util_is_directory(directory))
         {
             try {
-                for (const auto& entry : fs::directory_iterator(directory)) {
-                    if (entry.is_regular_file() && entry.path().extension() == ".hsaco") {
-                        filelist_.push_back(entry.path().string());
+                auto files = util_get_directory_files(directory);
+                for (const auto& file : files) {
+                    if (file.ends_with(".hsaco")) {
+                        filelist_.push_back(file);
                     }
                 }
 
@@ -436,9 +491,8 @@ bool coCache::setLocation(hsa_agent_t agent, const std::string& directory, const
                 {
                     addFile(file, agent, strFilter);
                 }
-            } catch (const fs::filesystem_error& e) {
-                std::cerr << "Filesystem error: " << e.what() << std::endl;
-            } catch (const std::exception& e) {
+            }
+            catch (const std::exception& e) {
                 std::cerr << "General exception: " << e.what() << std::endl;
             }
         }
@@ -1059,6 +1113,7 @@ bool handlerManager::setHandlers(const std::vector<std::string>& handlers)
     for (auto lib : handlers)
     {
         void *handle = dlopen(lib.c_str(),RTLD_NOW | RTLD_GLOBAL | RTLD_NODELETE);
+        std::cerr << "handlerManager: Opened" << lib.c_str() << std::endl;
         if (!handle)
         {
             std::cerr << "dlopen failed: " <<  dlerror() << std::endl;

@@ -61,6 +61,7 @@ THE SOFTWARE.
 #include <sys/stat.h>
 #include <link.h>
 #include <elf.h>
+#include <dirent.h>
 
 #include <hsa.h>
 #include <hsa_ven_amd_aqlprofile.h>
@@ -83,6 +84,10 @@ THE SOFTWARE.
 #define RANDOM_DISPATCH_DISTRIBUTION 100
 
 using namespace std;
+
+bool util_is_directory(const std::string& path);
+std::vector<std::string> util_get_directory_files(const std::string& path, bool includeDirectories = false);
+bool util_ends_with_substring(const std::string& str, const std::string& suffix);
 
 #define CHECK_STATUS(msg, status) do {                                                             \
   if ((status) != HSA_STATUS_SUCCESS) {                                                            \

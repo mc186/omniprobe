@@ -19,7 +19,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 ################################################################################
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address -O0")
+#set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} -fsanitize=address")
 
 set ( TARGET_LIB "${TARGET_NAME}" )
 set ( LIB_SRC
@@ -111,10 +112,10 @@ target_include_directories (
 target_link_libraries(
     ${TARGET_LIB}
   PRIVATE
-    ${HSA_RUNTIME_LIB}
     c
-    stdc++
-    stdc++fs
+    c++
+    #c++fs
+    ${HSA_RUNTIME_LIB}
     ${DH_COMMS_LIBRARIES}/libdh_comms.so
     kernelDB64
     amd_comgr
