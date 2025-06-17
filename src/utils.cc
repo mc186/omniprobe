@@ -70,10 +70,10 @@ std::vector<std::string> util_get_directory_files(const std::string& path, bool 
         if (stat(full_path.c_str(), &info) == 0)
         {
             if(info.st_mode & S_IFREG) {
-                files.push_back(entry->d_name);
+                files.push_back(full_path);
             }
             if(info.st_mode & S_IFDIR && includeDirectories)
-                files.push_back(entry->d_name);
+                files.push_back(full_path);
         }
     }
 

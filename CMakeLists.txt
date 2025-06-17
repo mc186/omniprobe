@@ -46,7 +46,7 @@ if(DEFINED ENV{ROCM_PATH})
     set(ROCM_PATH $ENV{ROCM_PATH})
 else()
     # Set a default value if ROCM_PATH is not set
-    set(ROCM_PATH "/opt/rocm/lib")
+    set(ROCM_PATH "/opt/rocm")
 endif()
 
 message("ROCM_PATH: ${ROCM_PATH}")

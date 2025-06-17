@@ -113,7 +113,7 @@ target_link_libraries(
     ${TARGET_LIB}
   PRIVATE
     c
-    c++
+    stdc++
     #c++fs
     ${HSA_RUNTIME_LIB}
     ${DH_COMMS_LIBRARIES}/libdh_comms.so

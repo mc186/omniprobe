@@ -380,10 +380,15 @@ void cache_watcher()
                 if (wd != -1)
                 {
                     watch_map[wd] = entry;
-                    cerr << "Added " << " to watch list\n";
+                    cerr << "Added " << entry << " to watch list\n";
+                }
+                else
+                {
+                    cerr << "Could not add " << entry << " to watch list\n";
                 }
             }
         }
+
 
         int wd = inotify_add_watch(fd, dir.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
         if (wd == -1)
