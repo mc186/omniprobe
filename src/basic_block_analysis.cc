@@ -338,8 +338,8 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 }
             }
         }
-        else
-            std::cerr << "No instructions for block id " << block_idx << std::endl;
+        //else
+        //    std::cerr << "No instructions for block id " << block_idx << std::endl;
     }
     catch (std::runtime_error e)
     {
