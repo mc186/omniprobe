@@ -31,8 +31,16 @@ import glob
 import subprocess
 import logging
 from pathlib import Path
+from pyfiglet import figlet_format
 
 sys.stdout.reconfigure(line_buffering=True)
+
+
+# Generate ASCII art for the word "omniprobe"
+name  = "Omniprobe"
+ascii_art = figlet_format(name, font="standard")  # Default font
+print(ascii_art)
+
 
 #LOGDUR_INSTRUMENTED
 #LOGDUR_KERNEL_CACHE
