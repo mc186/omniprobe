@@ -63,6 +63,8 @@ bool message_logger_t::handle(const dh_comms::message_t &message, const std::str
 {
     JSONHelper json;
     dh_comms::wave_header_t hdr = message.wave_header();
+    if (hdr.user_type != dh_comms::message_type::address)
+        return false;
     switch(hdr.user_type)
     {
         case dh_comms::message_type::address:
@@ -77,9 +79,7 @@ bool message_logger_t::handle(const dh_comms::message_t &message, const std::str
             *log_file_ << json.getJSON() << std::endl;
             break;
     }
-    if (message.wave_header().user_type != dh_comms::message_type::address)
-        return false;
-    return handle(message);
+    return true;
 }
 
 bool message_logger_t::handle(const dh_comms::message_t &message)
@@ -185,6 +185,21 @@ void message_logger_t::handle_header(const dh_comms::message_t& message, JSONHel
     json.addField("se_id", ((uint16_t)hdr.se_id));
     json.addField("cu_id", ((uint16_t)hdr.cu_id));
     json.addField("active_lane_count", (uint16_t)hdr.active_lane_count);
+    switch(hdr.user_data & 0b11)
+    {
+        case dh_comms::memory_access::undefined:
+            json.addField("op_type", "\"undefined\"");
+            break;
+        case dh_comms::memory_access::read:
+            json.addField("op_type", "\"read\"");
+            break;
+        case dh_comms::memory_access::write:
+            json.addField("op_type", "\"write\"");
+            break;
+        case dh_comms::memory_access::read_write:
+            json.addField("op_type", "\"readwrite\"");
+            break;
+    }
     return;
 }
 

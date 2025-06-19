@@ -96,4 +96,5 @@ template void JSONHelper::addField<uint32_t>(const std::string&, uint32_t, bool,
 template void JSONHelper::addField<uint16_t>(const std::string&, uint16_t, bool, bool);
 template void JSONHelper::addField<uint8_t>(const std::string&, uint8_t, bool, bool);
 template void JSONHelper::addField<std::string&>(const std::string&, std::string&, bool, bool);
+template void JSONHelper::addField<const char *>(const std::string&, const char *, bool, bool);
 template void JSONHelper::addVector<uint64_t>(const std::string&, const std::vector<uint64_t>&, bool, bool);
