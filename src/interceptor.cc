@@ -439,14 +439,15 @@ void cache_watcher()
                                 if (event->mask & IN_CREATE)
                                 {
                                     struct stat path_stat;
-                                    stat(event->name, &path_stat);
-                                    std::string strNewDirectory = dir;
+                                    std::string strNewDirectory = watch_map[event->wd];
+                                    strNewDirectory += "/";
                                     strNewDirectory += event->name;
-                                    //cerr << "Creating: " << strNewDirectory << std::endl;
+                                    stat(strNewDirectory.c_str(), &path_stat);
+                                    cerr << "Creating: " << strNewDirectory << std::endl;
                                     if (S_ISDIR(path_stat.st_mode)) {
                                         int wd = inotify_add_watch(fd, strNewDirectory.c_str(), IN_CREATE | IN_DELETE | IN_MODIFY | IN_MOVED_FROM | IN_MOVED_TO);
                                         if (wd != -1)
-                                            watch_map[wd] = event->name;
+                                            watch_map[wd] = strNewDirectory;
                                       //  else
                                         //    cerr << "ERROR: Trying to watch " << strNewDirectory << std::endl;
                                     }
