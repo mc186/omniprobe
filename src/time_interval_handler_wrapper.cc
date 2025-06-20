@@ -48,22 +48,23 @@ bool time_interval_handler_wrapper::handle(const dh_comms::message_t &message, c
     auto hdr = message.wave_header();
     try
     {
-        auto& instructions = kdb.getInstructionsForLine(kernel, hdr.dwarf_line);
-        if (instructions.size())
+        if (hdr.user_type == dh_comms::message_type::time_interval)
         {
-            if (current_block_)
+            auto& instructions = kdb.getInstructionsForLine(kernel, hdr.dwarf_line);
+            if (instructions.size())
             {
-                auto it = block_timings_.find(current_block_);
-                if (it != block_timings_.end())
-                    it->second += hdr.timestamp - start_time_;
-                else
-                    block_timings_[current_block_] = hdr.timestamp - start_time_;
+                if (current_block_)
+                {
+                    auto it = block_timings_.find(current_block_);
+                    if (it != block_timings_.end())
+                        it->second += hdr.timestamp - start_time_;
+                    else
+                        block_timings_[current_block_] = hdr.timestamp - start_time_;
+                }
+                current_block_ = instructions[0].block_;
+                start_time_ = hdr.timestamp;
             }
-            current_block_ = instructions[0].block_;
-            start_time_ = hdr.timestamp;
         }
-        for (auto inst : instructions)
-            std::cout << inst.inst_ << std::endl;
     }
     catch (std::runtime_error e)
     {

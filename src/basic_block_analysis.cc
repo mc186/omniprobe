@@ -444,7 +444,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             bigints.clear();
             doubles.clear();
             strings["kernel"] = strKernel_;
-            bigints["dispatch_d"] = dispatch_id_;
+            bigints["dispatch_id"] = dispatch_id_;
             doubles["kernel_branchiness"] = 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)));
             bigints["block_start_line"] = instructions[0].line_;
             bigints["block_end_line"] = instructions[instructions.size() - 1].line_;

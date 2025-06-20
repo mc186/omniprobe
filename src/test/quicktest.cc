@@ -76,13 +76,13 @@ int main() {
     hipErrorCheck(hipStreamCreate(&stream));
  
     int blocks = 80;
-    int threads = 32;
+    int threads = 64;
     int fact = 1;//100;KAL
     
     hipErrorCheck(hipMemcpyAsync(x, x_h, sz, hipMemcpyHostToDevice));
     hipLaunchKernelGGL(HIP_KERNEL_NAME(kernel<1,1>), dim3(blocks), dim3(threads), 0, 0, x);
     kernelErrorCheck();
-    hipFree(x);
+    auto status = hipFree(x);
     return 0; 
  
 }
