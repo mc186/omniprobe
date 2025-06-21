@@ -23,7 +23,7 @@ THE SOFTWARE.
 #include "inc/time_interval_handler_wrapper.h"
 #include <iostream>
 #include <cassert>
-#include "time_interval_handler.h"
+#include "inc/time_interval_handler.h"
 
 time_interval_handler_wrapper::time_interval_handler_wrapper(const std::string& strKernel, uint64_t dispatch_id, bool verbose)
     : first_start_(0xffffffffffffffff),

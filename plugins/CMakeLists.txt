@@ -142,6 +142,7 @@ target_link_libraries(
     stdc++fs
     ${DH_COMMS_LIBRARIES}/libdh_comms.so
     kernelDB64
+    logDuration64
 )
 
 target_link_libraries(

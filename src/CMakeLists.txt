@@ -31,6 +31,7 @@ set ( LIB_SRC
   ${LIB_DIR}/pyHandler.cc
   ${LIB_DIR}/memory_heatmap_wrapper.cc
   ${LIB_DIR}/time_interval_handler_wrapper.cc
+  ${LIB_DIR}/time_interval_handler.cc
   ${LIB_DIR}/reconfigure.cc
   ${LIB_DIR}/json_helpers.cc
   ${LIB_DIR}/memory_analysis_handler.cc
@@ -93,7 +94,7 @@ message("${HSACO_TARGET_LIST}")
 add_custom_target(hsaco_targets DEPENDS ${HSACO_TARGET_LIST})
 
 
-link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64 ${CMAKE_INSTALL_PREFIX}/lib)
+link_directories(${ROCM_ROOT_DIR}/lib $ENV{HOME}/.local/lib64 ${CMAKE_INSTALL_PREFIX}/lib .)
 add_library ( ${TARGET_LIB} SHARED ${LIB_SRC})
 add_dependencies(${TARGET_LIB} hsaco_targets dh_comms)
 
@@ -171,12 +172,14 @@ set_source_files_properties(${HEATMAP_SRC} PROPERTIES LANGUAGE HIP)
 target_compile_options(${HEATMAP_EXAMPLE} PRIVATE -fgpu-rdc  -Werror -Wall -Wextra)
 
 add_dependencies(${HEATMAP_EXAMPLE} dh_comms)
+add_dependencies(${HEATMAP_EXAMPLE} dh_comms ${TARGET_LIB})
 
 target_link_libraries(
     ${HEATMAP_EXAMPLE}
   PRIVATE
     ${ROCM_PATH}/lib/libhiprtc.so
     ${DH_COMMS_LIBRARIES}/libdh_comms.so
+    logDuration64
 )
 
 target_include_directories (
