@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "memory_analysis_handler.h"
+#include "inc/memory_analysis_handler.h"
 
 #include "hip_utils.h"
 #include "utils.h"

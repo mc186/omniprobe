@@ -77,7 +77,7 @@ private:
 //! addresses for all active lanes in the wavefront is compared to the optimal number of
 //! cache lines needed when all addresses are consecutive. If the memory accesses are
 //! LDS accesses, the number of bank conflicts for the accesses are counted.
-class memory_analysis_handler_t : public message_handler_base {
+class __attribute__((visibility("default"))) memory_analysis_handler_t : public message_handler_base {
 public:
   memory_analysis_handler_t(bool verbose);
   memory_analysis_handler_t(const memory_analysis_handler_t &) = default;
