@@ -33,6 +33,7 @@ set ( LIB_SRC
   ${LIB_DIR}/time_interval_handler_wrapper.cc
   ${LIB_DIR}/reconfigure.cc
   ${LIB_DIR}/json_helpers.cc
+  ${LIB_DIR}/memory_analysis_handler.cc
 )
 
 set (HEATMAP_EXAMPLE "example_heatmap")
