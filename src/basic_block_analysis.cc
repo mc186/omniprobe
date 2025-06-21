@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include <cassert>
 #include <set>
 #include "inc/basic_block_analysis.h"
-#include "time_interval_handler.h"
+#include "inc/time_interval_handler.h"
 #include <iomanip>
 #include <fstream>
 #include <cstdint>
