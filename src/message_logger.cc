@@ -157,7 +157,7 @@ bool message_logger_t::handle_address_message(const dh_comms::message_t& message
         for (size_t i = 0; i != message.no_data_items(); ++i)
             addrs.push_back( *(const uint64_t *)message.data_item(i));
         if (addrs.size())
-            json.addVector("addresses", addrs, false, true);
+            json.addVector("addresses", addrs, false, false);
 
     }
     return true;
@@ -171,7 +171,7 @@ bool message_logger_t::handle_timeinterval_message(const dh_comms::message_t& me
 void message_logger_t::handle_header(const dh_comms::message_t& message, JSONHelper& json)
 {
     auto hdr = message.wave_header();
-    json.addField("exec", hdr.exec, false, true);
+    json.addField("exec", hdr.exec, false, false);
     json.addField("timestamp", hdr.timestamp);
     json.addField("dwarf_line", hdr.dwarf_line);
     json.addField("dwarf_column", hdr.dwarf_column);
