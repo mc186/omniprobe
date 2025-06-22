@@ -27,8 +27,8 @@ THE SOFTWARE.
 #include "dh_comms_dev.h"
 #include "dh_comms.h"
 #include "hip_utils.h"
-#include "memory_heatmap.h"
-#include "time_interval_handler.h"
+#include "inc/memory_heatmap.h"
+#include "inc/time_interval_handler.h"
 
 __global__ void __amd_crk_test(float *dst, float *src, float alpha, size_t array_size, dh_comms::dh_comms_descriptor *tmp_rsrc, void *ptr)
 {
