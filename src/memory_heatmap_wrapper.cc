@@ -27,7 +27,7 @@ THE SOFTWARE.
 #include "inc/memory_heatmap_wrapper.h"
 #include "data_headers.h"
 #include "message.h"
-#include "memory_heatmap.h"
+#include "inc/memory_heatmap.h"
 
 memory_heatmap_wrapper::memory_heatmap_wrapper(const std::string& strKernel, uint64_t dispatch_id, size_t page_size, bool verbose)
     : strKernel_(strKernel),

@@ -23,8 +23,8 @@ THE SOFTWARE.
 #include "hip/hip_runtime.h"
 #include "dh_comms.h"
 #include "dh_comms_dev.h"
-#include "time_interval_handler.h"
-#include "memory_heatmap.h"
+#include "inc/time_interval_handler.h"
+#include "inc/memory_heatmap.h"
 
 // Compile with hipcc -O3 --amdgpu-target=gfx908 -I${ROCM_PATH}/roctracer/include -L${ROCM_PATH}/roctracer/lib -lroctx64 test.cpp
 

@@ -30,6 +30,7 @@ set ( LIB_SRC
   ${LIB_DIR}/comms_mgr.cc
   ${LIB_DIR}/pyHandler.cc
   ${LIB_DIR}/memory_heatmap_wrapper.cc
+  ${LIB_DIR}/memory_heatmap.cc
   ${LIB_DIR}/time_interval_handler_wrapper.cc
   ${LIB_DIR}/time_interval_handler.cc
   ${LIB_DIR}/reconfigure.cc
@@ -146,6 +147,7 @@ target_link_libraries(
   PRIVATE
     ${ROCM_PATH}/lib/libhiprtc.so
     ${DH_COMMS_LIBRARIES}/libdh_comms.so
+    logDuration64
 )
 
 target_include_directories (
