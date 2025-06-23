@@ -57,6 +57,7 @@ RUN --mount=type=ssh \
     git clone git@github.com:AMDResearch/logduration.git && \
     cd logduration && \
     git submodule update --init --recursive && \
+    python3 -m pip install -r omniprobe/requirements.txt && \
     mkdir -p /opt/logduration && \
     cmake --version && \
     mkdir -p build && \
