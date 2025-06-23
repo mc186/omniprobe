@@ -3,7 +3,9 @@
 [![Ubuntu Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml)
 [![RedHat Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml)
 
-### This project is in an alpha state. We are making it available early because of significant interest in having access to it now. There is still some productization and packaging to do. And many more tests need to be added. It works, but if you use it enough, you will undoubtedly find corner cases where things go wrong. The good news is that you _can_ mostly have far more performance visiblity inside kernels running on AMD Instinct GPUs than has ever been possible before.
+> [!IMPORTANT]  
+> This project is in an alpha state. We are making it available early because of significant interest in having access to it now. There is still some productization and packaging to do. And many more tests need to be added. It works, but if you use it enough, you will undoubtedly find corner cases where things go wrong. The good news is that you _can_ mostly have far more performance visiblity inside kernels running on AMD Instinct GPUs than has ever been possible before.
+
 logduration is a project that originally started simply to provide a quick and easy way to observe all kernel
 durations within an application, without having to run the profiler and be saddled with all of the application
 perturbation profiling introduces (e.g. kernels are often serialized). It turned into something more involved, however.
@@ -116,6 +118,8 @@ build.sh --apptainer --docker
 apptainer exec logduration.sif bash
 # Launch docker container
 docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined <image-id> bash
+# OR launch apptainer container
+apptainer exec --cleanenv docker/logduration.sif bash --rcfile /etc/bashrc
 ```
 
 ### Build from source
