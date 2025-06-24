@@ -58,6 +58,7 @@ From: rocm/rocm-build-ubuntu-22.04:6.3
     cd /app 
     ls
     cd logduration 
+    pip install -r omniprobe/requirements.txt
     if [ -d build ]; then rm -rf build; fi
     mkdir -p /opt/logduration 
     mkdir -p build 
