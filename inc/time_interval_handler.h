@@ -35,6 +35,7 @@ struct time_interval {
 //! stop time in any message.
 class __attribute__((visibility("default"))) time_interval_handler_t : public message_handler_base {
 public:
+  time_interval_handler_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, bool verbose = false);
   time_interval_handler_t(bool verbose);
   time_interval_handler_t(const time_interval_handler_t &) = default;
   virtual ~time_interval_handler_t() = default;
@@ -45,6 +46,9 @@ public:
   virtual void clear() override;
 
 private:
+  std::string kernel_;
+  uint64_t dispatch_id_;
+  std::string location_;
   uint64_t first_start_;
   uint64_t last_stop_;
   uint64_t total_time_;

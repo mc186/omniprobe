@@ -26,6 +26,15 @@
 
 namespace dh_comms {
 
+time_interval_handler_t::time_interval_handler_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, bool verbose /*= false*/) : kernel_(strKernel), dispatch_id_(dispatch_id), location_(location),
+  first_start_(0xffffffffffffffff),
+  last_stop_(0),
+  total_time_(0),
+  no_intervals_(0),
+  verbose_(verbose)
+{
+}
+
 time_interval_handler_t::time_interval_handler_t(bool verbose)
     : first_start_(0xffffffffffffffff),
       last_stop_(0),

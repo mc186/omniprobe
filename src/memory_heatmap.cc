@@ -30,6 +30,10 @@
 #include <vector>
 
 namespace dh_comms {
+  
+memory_heatmap_t::memory_heatmap_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, size_t page_size /*= 1024 * 1024*/, bool verbose /*= false*/) : verbose_(verbose), page_size_(page_size), kernel_(strKernel), dispatch_id_(dispatch_id), location_(location)
+{
+}
 memory_heatmap_t::memory_heatmap_t(size_t page_size, bool verbose)
     : verbose_(verbose),
       page_size_(page_size) {}

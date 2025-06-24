@@ -79,6 +79,7 @@ private:
 //! LDS accesses, the number of bank conflicts for the accesses are counted.
 class __attribute__((visibility("default"))) memory_analysis_handler_t : public message_handler_base {
 public:
+  memory_analysis_handler_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& strLocation, bool verbose);
   memory_analysis_handler_t(bool verbose);
   memory_analysis_handler_t(const memory_analysis_handler_t &) = default;
   virtual ~memory_analysis_handler_t() = default;
@@ -128,6 +129,9 @@ private:
   kernelDB::kernelDB *kdb_p = nullptr;
   std::string kernel_name = "";
   bool verbose_;
+  std::string kernel_;
+  uint64_t dispatch_id_;
+  std::string location_;
   const std::map<uint8_t, const char *> rw2str_map;
 
 public:

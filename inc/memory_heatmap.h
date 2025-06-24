@@ -31,6 +31,7 @@ namespace dh_comms {
 //! page are done. Page size is configurable.
 class __attribute__((visibility("default"))) memory_heatmap_t : public message_handler_base {
 public:
+  memory_heatmap_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, size_t page_size = 1024 * 1024, bool verbose = false);
   memory_heatmap_t(size_t page_size = 1024 * 1024, bool verbose = false);
   memory_heatmap_t(const memory_heatmap_t &) = default;
   virtual ~memory_heatmap_t() {};
@@ -43,6 +44,9 @@ public:
 private:
   bool verbose_;
   size_t page_size_;
+  std::string kernel_;
+  uint64_t dispatch_id_;
+  std::string location_;
   //! Maps the lowest address on each page to the number of accesses to the page.
   std::map<uint64_t, size_t> page_counts_;
 };

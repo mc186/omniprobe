@@ -82,6 +82,50 @@ void conflict_set::clear() {
   }
 }
 
+memory_analysis_handler_t::memory_analysis_handler_t(const std::string& kernel, uint64_t dispatch_id, const std::string& location,  bool verbose) : conflict_sets(), verbose_(verbose), kernel_(kernel), dispatch_id_(dispatch_id), location_(location),
+    rw2str_map{
+          {dh_comms::memory_access::undefined, "unspecified memory operation"},
+          {dh_comms::memory_access::read, "read"},
+          {dh_comms::memory_access::write, "write"},
+          {dh_comms::memory_access::read_write, "read/write"},
+      },
+      instr_size_map{
+          {"global_load_dword", {4, memory_access::read}},      {"global_load_dwordx2", {8, memory_access::read}},
+          {"global_load_dwordx3", {12, memory_access::read}},   {"global_load_dwordx4", {16, memory_access::read}},
+          {"global_store_dword", {4, memory_access::write}},    {"global_store_dwordx2", {8, memory_access::write}},
+          {"global_store_dwordx3", {12, memory_access::write}}, {"global_store_dwordx4", {16, memory_access::write}},
+      }
+{
+  conflict_sets.insert({1, std::vector<conflict_set>{
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{0, 32}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{32, 64}}},
+                           }});
+  conflict_sets.insert({2, std::vector<conflict_set>{
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{0, 32}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{32, 64}}},
+                           }});
+  conflict_sets.insert({4, std::vector<conflict_set>{
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{0, 32}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{32, 64}}},
+                           }});
+  conflict_sets.insert({8, std::vector<conflict_set>{
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{0, 16}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{16, 32}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{32, 48}}},
+                               conflict_set{std::vector<std::pair<size_t, size_t>>{{48, 64}}},
+                           }});
+  conflict_sets.insert({16, std::vector<conflict_set>{
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{0, 4}, {20, 24}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{4, 8}, {16, 20}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{8, 12}, {28, 32}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{12, 16}, {24, 28}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{32, 36}, {52, 56}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{36, 40}, {48, 52}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{40, 44}, {60, 64}}},
+                                conflict_set{std::vector<std::pair<size_t, size_t>>{{44, 48}, {56, 60}}},
+                            }});
+}
+
 memory_analysis_handler_t::memory_analysis_handler_t(bool verbose)
     : conflict_sets(),
       verbose_(verbose),

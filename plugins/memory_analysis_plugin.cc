@@ -21,7 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 *******************************************************************************/
 #include "plugin.h"
-#include "inc/memory_analysis_wrapper.h"
+#include "inc/memory_analysis_handler.h"
 
 extern "C"{
     PUBLIC_API void getMessageHandlers(const std::string& kernel, uint64_t dispatch_id, std::vector<dh_comms::message_handler_base *>& outHandlers)
@@ -30,6 +30,6 @@ extern "C"{
         const char* logDurLogLocation = std::getenv("LOGDUR_LOG_LOCATION");
         if (logDurLogLocation != NULL)
             location = logDurLogLocation;
-        outHandlers.push_back(new memory_analysis_wrapper_t(kernel, dispatch_id, location, false));
+        outHandlers.push_back(new dh_comms::memory_analysis_handler_t(kernel, dispatch_id, location, false));
     }
 }
