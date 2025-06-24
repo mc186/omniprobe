@@ -270,8 +270,8 @@ def validate_hip_config():
         print(f"\tLLVM_PASS_PLUGIN_PATH (should be located {base_llvm_pass_plugin}")
         return False
     else:
-        if not os.path.exists(triton_config['LLVM_PASS_PLUGIN_PATH']):
-            print(f"The file pointed to by LLVM_PASS_PLUGIN_PATH ({triton_config['LLVM_PASS_PLUGIN_PATH']}) is missing")
+        if not os.path.exists(hip_config['LLVM_PASS_PLUGIN_PATH']):
+            print(f"The file pointed to by LLVM_PASS_PLUGIN_PATH ({hip_config['LLVM_PASS_PLUGIN_PATH']}) is missing")
             return False
     return True
 
