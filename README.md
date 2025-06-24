@@ -1,4 +1,4 @@
-# logduration
+# Omniprobe
 
 [![Ubuntu Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml)
 [![RedHat Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml)
@@ -6,9 +6,11 @@
 > [!IMPORTANT]  
 > This project is in an alpha state. We are making it available early because of significant interest in having access to it now. There is still some productization and packaging to do. And many more tests need to be added. It works, but if you use it enough, you will undoubtedly find corner cases where things go wrong. The good news is that you _can_ mostly have far more performance visiblity inside kernels running on AMD Instinct GPUs than has ever been possible before.
 
-logduration is a project that originally started simply to provide a quick and easy way to observe all kernel
-durations within an application, without having to run the profiler and be saddled with all of the application
-perturbation profiling introduces (e.g. kernels are often serialized). It turned into something more involved, however.
+Omniprobe was originally called 'logduration' and was begun simply to provide a quick and easy way to observe all kernel
+durations within any ROCm application, without having to run the profiler or being saddled with all of the application
+perturbation profiling introduces (e.g. kernels are often serialized). It turned into something more feature-rich, however.
+(Because Omniprobe was originally named 'logduration', as you snoop around the code, you will invariably see 
+references to 'logduration', including some of the its naming conventions for environment variables.) 
 
 One of the longstanding challenges doing software performance optimization on AMD GPUs has been the lack of visibility
 into _intra_-kernel performance. Hardware performance counters are only attributable to specific kernel dispatches when
@@ -19,7 +21,7 @@ from aggregate performance what _might_ be the source of a bottleneck. It isn't 
 the whole business of performance optimization harder and take longer. And it sometimes imposes on developers the need to 
 reason from various aspects of specific hardware micro-architectures back to software and compiler implementations.
 
-logduration is a vehicle to facilitate attributing many common bottlenecks inside kernels to specific lines of kernel source code. It accomplishes
+Omniprobe is a vehicle to facilitate attributing many common bottlenecks inside kernels to specific lines of kernel source code. It accomplishes
 this by injecting code at compile-time into targeted kernels. The code that it injects is selectively placed and results in 
 instrumented kernels that stream context-laden messages to the host while they are running. logduration processes and analyzes these
 messages with one or multiple host-side "message handlers". From the information contained in these messages, it is possible to
@@ -41,7 +43,7 @@ logduration is a platform for implementing new intra-kernel observation and anal
 with new analytics and have additional useful capabilities both in development and planned.
 
 ## omniprobe
-omniprobe is a python wrapper around the functionality provided by logduration. It simplifies the process of setting up
+omniprobe is a command-line python wrapper around the functionality provided by liblogDuration. It simplifies the process of setting up
 the environment and launching instrumented applications. The various environment variables are documented below, though they
 only need to be explicitly set by the user if logduration is needed in a context for which running the python wrapper is not
 feasible.
