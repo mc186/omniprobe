@@ -56,5 +56,6 @@ private:
   size_t no_intervals_;
   bool verbose_;
   std::ostream *log_file_;
+  std::string format_;
 };
 } // namespace dh_comms

@@ -51,6 +51,7 @@ private:
   std::ostream *log_file_;
   //! Maps the lowest address on each page to the number of accesses to the page.
   std::map<uint64_t, size_t> page_counts_;
+  std::string format_;
 };
 
 } // namespace dh_comms

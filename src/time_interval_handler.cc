@@ -33,6 +33,11 @@ time_interval_handler_t::time_interval_handler_t(const std::string& strKernel, u
   no_intervals_(0),
   verbose_(verbose)
 {
+    const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
+    if (logDurLogFormat)
+        format_ = logDurLogFormat;
+    else
+        format_= "csv";
 }
 
 time_interval_handler_t::time_interval_handler_t(bool verbose)

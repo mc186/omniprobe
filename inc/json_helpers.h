@@ -37,6 +37,7 @@ public:
     void addVector(const std::string& name, const std::vector<T>& items, bool quotes = false, bool hex = false);
     template <typename T>
     void addField(const std::string& name, T value, bool quotes = false, bool hex = false);
+    void appendString(const std::string& str);
     std::string getJSON();
     void restart();
 private:

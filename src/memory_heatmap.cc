@@ -21,6 +21,7 @@
 // SOFTWARE.
 
 #include "inc/memory_heatmap.h"
+#include "inc/json_helpers.h"
 
 #include "data_headers.h"
 #include "message.h"
@@ -33,6 +34,11 @@ namespace dh_comms {
   
 memory_heatmap_t::memory_heatmap_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, size_t page_size /*= 1024 * 1024*/, bool verbose /*= false*/) : verbose_(verbose), page_size_(page_size), kernel_(strKernel), dispatch_id_(dispatch_id), location_(location)
 {
+    const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
+    if (logDurLogFormat)
+        format_ = logDurLogFormat;
+    else
+        format_= "csv";
 }
 memory_heatmap_t::memory_heatmap_t(size_t page_size, bool verbose)
     : verbose_(verbose),
@@ -93,13 +99,32 @@ void memory_heatmap_t::setupLogger()
 }
 
 void memory_heatmap_t::report() {
-  if (page_counts_.size() != 0) {
-    *log_file_ << "memory heatmap report:\n\tpage size = " << page_size_ << "\n";
+  if (format_ != "json")
+  {
+      if (page_counts_.size() != 0) {
+        *log_file_ << "memory heatmap report(" << kernel_ << "[" << dispatch_id_ << "])\n\tpage size = " << page_size_ << "\n";
+      }
+      for (const auto &[first_page_address, count] : page_counts_) {
+        auto last_page_address = first_page_address + page_size_ - 1;
+        *log_file_ << "\tpage[0x" << std::hex << std::setfill('0') << first_page_address << ":" << last_page_address << "] " << std::dec << count << " accesses\n";
+        //printf("\tpage [%016lx:%016lx] %12lu accesses\n", first_page_address, last_page_address, count);
+      }
   }
-  for (const auto &[first_page_address, count] : page_counts_) {
-    auto last_page_address = first_page_address + page_size_ - 1;
-    *log_file_ << "\tpage[0x" << std::hex << std::setfill('0') << first_page_address << ":" << last_page_address << "] " << std::dec << count << " accesses\n";
-    //printf("\tpage [%016lx:%016lx] %12lu accesses\n", first_page_address, last_page_address, count);
+  else if (page_counts_.size() != 0)
+  {
+    JSONHelper json;
+    json.addField("kernel", kernel_, true, false);
+    json.addField("dispatch_id", dispatch_id_);
+    std::vector<std::string> pages;
+    for (const auto &[first_page_address, count] : page_counts_) {
+        JSONHelper thisRange;
+        thisRange.addField("start_address", first_page_address);
+        thisRange.addField("end_address", first_page_address + page_size_ - 1);
+        thisRange.addField("accesses", count);
+        pages.push_back(thisRange.getJSON());
+    }
+    json.addVector("pages", pages);
+    *log_file_ << json.getJSON() << std::endl;
   }
 }
 
