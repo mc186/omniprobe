@@ -70,21 +70,36 @@ bool memory_heatmap_t::handle(const message_t &message) {
 
 void memory_heatmap_t::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
+    setupLogger();
     if (kernel_name.length() == 0)
     {
         std::vector<uint32_t> lines;
         kdb.getKernelLines(kernel_name, lines);
     }
     report();
+    if (location_ != "console")
+    {
+        delete log_file_;
+        log_file_ = nullptr;
+    }
+}
+
+void memory_heatmap_t::setupLogger()
+{
+    if (location_ == "console")
+        log_file_ = &std::cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
 }
 
 void memory_heatmap_t::report() {
   if (page_counts_.size() != 0) {
-    printf("memory heatmap report:\n\tpage size = %lu\n", page_size_);
+    *log_file_ << "memory heatmap report:\n\tpage size = " << page_size_ << "\n";
   }
   for (const auto &[first_page_address, count] : page_counts_) {
     auto last_page_address = first_page_address + page_size_ - 1;
-    printf("\tpage [%016lx:%016lx] %12lu accesses\n", first_page_address, last_page_address, count);
+    *log_file_ << "\tpage[0x" << std::hex << std::setfill('0') << first_page_address << ":" << last_page_address << "] " << std::dec << count << " accesses\n";
+    //printf("\tpage [%016lx:%016lx] %12lu accesses\n", first_page_address, last_page_address, count);
   }
 }
 

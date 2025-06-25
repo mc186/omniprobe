@@ -82,6 +82,7 @@ public:
   memory_analysis_handler_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& strLocation, bool verbose);
   memory_analysis_handler_t(bool verbose);
   memory_analysis_handler_t(const memory_analysis_handler_t &) = default;
+  void setupLogger();
   virtual ~memory_analysis_handler_t() = default;
   virtual bool handle(const message_t &message) override;
   virtual bool handle(const message_t &message, const std::string &kernel_name, kernelDB::kernelDB &kdb) override;
@@ -133,6 +134,7 @@ private:
   uint64_t dispatch_id_;
   std::string location_;
   const std::map<uint8_t, const char *> rw2str_map;
+  std::ostream *log_file_;
 
 public:
   struct access_size_and_type {

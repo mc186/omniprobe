@@ -34,6 +34,7 @@ public:
   memory_heatmap_t(const std::string& strKernel, uint64_t dispatch_id, const std::string& location, size_t page_size = 1024 * 1024, bool verbose = false);
   memory_heatmap_t(size_t page_size = 1024 * 1024, bool verbose = false);
   memory_heatmap_t(const memory_heatmap_t &) = default;
+  void setupLogger();
   virtual ~memory_heatmap_t() {};
   virtual bool handle(const message_t &message) override;
   virtual bool handle(const message_t &message, const std::string& kernel_name, kernelDB::kernelDB& kdb) override;
@@ -47,6 +48,7 @@ private:
   std::string kernel_;
   uint64_t dispatch_id_;
   std::string location_;
+  std::ostream *log_file_;
   //! Maps the lowest address on each page to the number of accesses to the page.
   std::map<uint64_t, size_t> page_counts_;
 };

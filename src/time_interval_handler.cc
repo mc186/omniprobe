@@ -79,6 +79,15 @@ bool time_interval_handler_t::handle(const message_t &message) {
   return true;
 }
 
+void time_interval_handler_t::setupLogger()
+{
+    if (location_ == "console")
+        log_file_ = &std::cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
+}
+
+
 void time_interval_handler_t::report(const std::string& kernel_name, kernelDB::kernelDB& kdb)
 {
     if (kernel_name.length() == 0)
@@ -86,6 +95,7 @@ void time_interval_handler_t::report(const std::string& kernel_name, kernelDB::k
         std::vector<uint32_t> lines;
         kdb.getKernelLines(kernel_name, lines);
     }
+    setupLogger();
     report();
 }
 

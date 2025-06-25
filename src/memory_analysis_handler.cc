@@ -583,14 +583,29 @@ void memory_analysis_handler_t::report_cache_line_use() {
   printf("=== End of L2 cache line use report ===============\n");
 }
 
+void memory_analysis_handler_t::setupLogger()
+{
+    if (location_ == "console")
+        log_file_ = &std::cout;
+    else
+        log_file_ = new std::ofstream(location_, std::ios::app);
+}
+
+
 void memory_analysis_handler_t::report(const std::string &kernel_name, kernelDB::kernelDB &kdb) {
   if (kernel_name.length() == 0) {
     std::vector<uint32_t> lines;
     kdb.getKernelLines(kernel_name, lines);
   }
   report();
+  if (location_ != "console")
+  {
+    delete log_file_;
+    log_file_ = nullptr;
+  }
 }
 void memory_analysis_handler_t::report() {
+  setupLogger();
   report_cache_line_use();
   report_bank_conflicts();
 }

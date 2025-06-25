@@ -485,7 +485,10 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         it++;
     }
     if (location_ != "console")
+    {
         delete log_file_;
+        log_file_ = nullptr;
+    }
 }
 
 void basic_block_analysis::report()
