@@ -12,7 +12,7 @@ From: rocm/rocm-build-ubuntu-22.04:6.3
     export TRITON_LLVM=/root/.triton/llvm/llvm-7ba6768d-ubuntu-x64 
 
 %files 
-    ../../logduration /app/logduration
+    ../../omniprobe /app/omniprobe
     triton_install.sh /app
 
 %post 
@@ -57,7 +57,7 @@ From: rocm/rocm-build-ubuntu-22.04:6.3
     
     cd /app 
     ls
-    cd logduration 
+    cd omniprobe 
     pip install -r omniprobe/requirements.txt
     if [ -d build ]; then rm -rf build; fi
     mkdir -p /opt/logduration 
@@ -66,4 +66,5 @@ From: rocm/rocm-build-ubuntu-22.04:6.3
     cmake --build build --target install 
 
 %runscript 
-    exec /bin/bash "$@" 
+    cd /workspace
+    exec /bin/bash

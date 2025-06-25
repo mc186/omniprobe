@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Container name
-name="logduration"
+name="omniprobe"
 
 # Script directories
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -57,8 +57,8 @@ if [ "$build_docker" = true ]; then
     export DOCKER_BUILDKIT=1
     docker build \
         --ssh default \
-        -t "$name" \
-        -f "$script_dir/logduration.Dockerfile" \
+        -t "$name:$(cat "$parent_dir/VERSION")" \
+        -f "$script_dir/omniprobe.Dockerfile" \
         .
 
     echo "Docker build complete!"
@@ -76,7 +76,7 @@ if [ "$build_apptainer" = true ]; then
 
     # Build the Apptainer container
     apptainer build \
-      "${name}.sif" "$script_dir/logduration.def"
+      "${name}_$(cat "$parent_dir/VERSION").sif" "$script_dir/omniprobe.def"
 
     echo "Apptainer build complete!"
 fi

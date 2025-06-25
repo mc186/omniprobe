@@ -1,21 +1,21 @@
 # Omniprobe
 
-[![Ubuntu Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/ubuntu.yml)
-[![RedHat Linux (ROCm, LLVM)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml/badge.svg)](https://github.com/AMDResearch/logduration/actions/workflows/redhat.yml)
+[![Ubuntu Linux (ROCm, LLVM)](https://github.com/AMDResearch/omniprobe/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/AMDResearch/omniprobe/actions/workflows/ubuntu.yml)
+[![RedHat Linux (ROCm, LLVM)](https://github.com/AMDResearch/omniprobe/actions/workflows/redhat.yml/badge.svg)](https://github.com/AMDResearch/omniprobe/actions/workflows/redhat.yml)
 
 > [!IMPORTANT]  
-> This project is in an alpha state. We are making it available early because of significant interest in having access to it now. There is still some productization and packaging to do. And many more tests need to be added. It works, but if you use it enough, you will undoubtedly find corner cases where things go wrong. The good news is that you _can_ mostly have far more performance visiblity inside kernels running on AMD Instinct GPUs than has ever been possible before.
+> This project is in an alpha state. We are making it available early because of significant interest in having access to it now. There is still some productization and packaging to do. And many more tests need to be added. It works, but if you use it enough, you will undoubtedly find corner cases where things go wrong. The good news is that you _can_ mostly have far more performance visibility inside kernels running on AMD Instinct GPUs than has ever been possible before.
 
 Omniprobe was originally called 'logduration' and was begun simply to provide a quick and easy way to observe all kernel
 durations within any ROCm application, without having to run the profiler or being saddled with all of the application
 perturbation profiling introduces (e.g. kernels are often serialized). It turned into something more feature-rich, however.
 (Because Omniprobe was originally named 'logduration', as you snoop around the code, you will invariably see 
-references to 'logduration', including some of the its naming conventions for environment variables.) 
+references to 'logduration', including some of its naming conventions for environment variables.) 
 
 One of the longstanding challenges doing software performance optimization on AMD GPUs has been the lack of visibility
 into _intra_-kernel performance. Hardware performance counters are only attributable to specific kernel dispatches when
 kernels are serialized and counters are gathered on kernel dispatch boundaries (i.e. before a kernel is dispatched and 
-after it completes.) This means that developers typically only have _aggregate_ visiblity into performance  - 
+after it completes.) This means that developers typically only have _aggregate_ visibility into performance  - 
 a kind of average - but pinpointing specific bottlenecks in code can be problematic. Developers have to infer
 from aggregate performance what _might_ be the source of a bottleneck. It isn't that this can't be done, it just makes 
 the whole business of performance optimization harder and take longer. And it sometimes imposes on developers the need to 
@@ -25,11 +25,12 @@ Omniprobe is a vehicle to facilitate attributing many common bottlenecks inside 
 this by injecting code at compile-time into targeted kernels. The code that it injects is selectively placed and results in 
 instrumented kernels that stream context-laden messages to the host while they are running. logduration processes and analyzes these
 messages with one or multiple host-side "message handlers". From the information contained in these messages, it is possible to
-isolate many common-case bottlenecks that can inadvertantly be written into code.
+isolate many common-case bottlenecks that can inadvertently be written into code.
 
 Not every possible bottleneck can be identified and isolated in this way. Instrumenting code necessarily perturbs the behavior
 of a kernel. But there are many common bottlenecks for which this perturbation is not a problem. Some bottleneck detection examples
 we have already implemented are:
+
 - Memory Access Inefficiencies
   - Bank Conflicts
   - Non-coalesced memory accesses
@@ -43,13 +44,14 @@ logduration is a platform for implementing new intra-kernel observation and anal
 with new analytics and have additional useful capabilities both in development and planned.
 
 ## omniprobe
-omniprobe is a command-line python wrapper around the functionality provided by liblogDuration. It simplifies the process of setting up
+`omniprobe` is a command-line python wrapper around the functionality provided by `liblogDuration`. It simplifies the process of setting up
 the environment and launching instrumented applications. The various environment variables are documented below, though they
 only need to be explicitly set by the user if logduration is needed in a context for which running the python wrapper is not
 feasible.
+
 ```
 Omniprobe is developed by Advanced Micro Devices, Research and Advanced Development
-Copyright (c) 2024 Advanced Micro Devices. All rights reserved.
+Copyright (c) 2025 Advanced Micro Devices. All rights reserved.
 
 usage: omniprobe [options] -- application
 
@@ -68,12 +70,13 @@ General omniprobe arguments:
   -d , --dispatches           	The dispatches for which to capture instrumentation output. This only applies when running with --instrumented.  Valid options: [all, random, 1]
   -c , --cache-location       	The location of the file system cache for instrumented kernels. For Triton this is typically found at $HOME/.triton/cache
   -t , --log-format           	The format for logging results. Default is 'csv'. Valid options: [csv|json]
-  -l , --log-location         	The location where all of your data should be logged. By default it will be to the console.
+  -l , --log-location         	The location where all your data should be logged. By default, it will be to the console.
   -a  [ ...], --analyzers  [ ...]
                               	The analyzer(s) to use for processing data being streamed from instrumented kernels. 
                               	Valid values are ['MessageLogger', 'Heatmap', 'MemoryAnalysis', 'BasicBlockAnalysis'] or a reference to any shared library that implements an omniprobe message handler.
   -- [ ...]                   	Provide command for instrumenting after a double dash.
 ```
+
 ## Environment Variables
 - LOGDUR_LOG_LOCATION
   - console
@@ -109,20 +112,15 @@ General omniprobe arguments:
 
 ### Quick start (container)
 
-We provide containerized execution environments for users to get started with logduration right away. Leverage the [`docker/build.sh`](docker/build.sh) script to build a container image with the latest version of logduration and its dependencies. Use the `--docker` and/or `--apptainer` flags to build the image for your preferred container runtime.
+We provide containerized execution environments for users to get started with omniprobe right away. Leverage the [`containers/run.sh`](containers/run.sh) script to jump into a container with the project and all of its dependencies pre-installed. Use the `--docker` or `--apptainer` flags to build the image for your preferred container runtime.
 
 Example:
 ```shell
-cd docker
-# Build apptainer AND docker images
-build.sh --apptainer --docker
-# Launch apptainer container
-apptainer exec logduration.sif bash
-# Launch docker container
-docker run -it --network=host --device=/dev/kfd --device=/dev/dri --group-add video --cap-add=SYS_PTRACE --security-opt seccomp=unconfined <image-id> bash
-# OR launch apptainer container
-apptainer exec --cleanenv docker/logduration.sif bash --rcfile /etc/bashrc
+# Start container
+./docker/run.sh --docker # Or --apptainer depending on your preference
 ```
+
+That's it! If a container matching your detected [`VERSION`](VERSION) of omniprobe doesn't exist already, one will be built automatically.
 
 ### Build from source
 
@@ -164,4 +162,4 @@ logDuration is now dependent on three other libraries that provide various aspec
 ## FAQ
 
 ### How do you recommend I install Triton?
-To build with Triton instrumentation support, we require you provide the path to Triton's LLVM install (`TRITON_LLVM`). We recommend using a virtual Python environment to avoid clobbering your other packages. See [`docker/triton_install.sh`](docker/triton_install.sh) for creating this virtual environment automatically. 
+To build with Triton instrumentation support, we require you provide the path to Triton's LLVM install (`TRITON_LLVM`). We recommend using a virtual Python environment to avoid clobbering your other packages. See [`docker/triton_install.sh`](docker/triton_install.sh) for help creating this virtual environment automatically. 

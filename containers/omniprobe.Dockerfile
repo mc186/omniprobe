@@ -54,8 +54,8 @@ RUN mkdir -p ~/.ssh && \
 
 RUN --mount=type=ssh \
     cd /app && \
-    git clone git@github.com:AMDResearch/logduration.git && \
-    cd logduration && \
+    git clone git@github.com:AMDResearch/omniprobe.git && \
+    cd omniprobe && \
     git submodule update --init --recursive && \
     python3 -m pip install -r omniprobe/requirements.txt && \
     mkdir -p /opt/logduration && \
@@ -66,5 +66,8 @@ RUN --mount=type=ssh \
 
 ENV PATH=/opt/logduration/bin/logDuration:${PATH}
 
+# Set working directory to where the project will be mounted
+WORKDIR /workspace
+
 # Set the default command to run when the container starts
-CMD ["bash"]
+CMD ["/bin/bash"]
