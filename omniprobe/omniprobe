@@ -265,14 +265,14 @@ def validate_triton_config():
 
 def validate_hip_config():
     global hip_config
-    if 'LLVM_PASS_PLUGIN_PATH' not in hip_config:
-        print("You are missing some required configuration parameters in your HIP environment. You need to specify all of the following environment variables:")
-        print(f"\tLLVM_PASS_PLUGIN_PATH (should be located {base_llvm_pass_plugin}")
-        return False
-    else:
-        if not os.path.exists(hip_config['LLVM_PASS_PLUGIN_PATH']):
-            print(f"The file pointed to by LLVM_PASS_PLUGIN_PATH ({hip_config['LLVM_PASS_PLUGIN_PATH']}) is missing")
-            return False
+    #if 'LLVM_PASS_PLUGIN_PATH' not in hip_config:
+    #    print("You are missing some required configuration parameters in your HIP environment. You need to specify all of the following environment variables:")
+    #    print(f"\tLLVM_PASS_PLUGIN_PATH (should be located {base_llvm_pass_plugin}")
+    #    return False
+    #else:
+    #    if not os.path.exists(hip_config['LLVM_PASS_PLUGIN_PATH']):
+    #        print(f"The file pointed to by LLVM_PASS_PLUGIN_PATH ({hip_config['LLVM_PASS_PLUGIN_PATH']}) is missing")
+    #        return False
     return True
 
 def setup_env(parms):
@@ -373,6 +373,75 @@ def setup_env(parms):
         print(dump_string)
     return env
 
+def is_python_executable(filename):
+    """
+    Check if a filename references a Python executable.
+
+    Args:
+        filename (str): The name of the file to check
+
+    Returns:
+        bool: True if the filename likely refers to a Python executable, False otherwise
+    """
+    if not isinstance(filename, str):
+        return False
+
+    # Convert to lowercase for case-insensitive matching
+    filename = filename.lower().strip()
+
+    # Common Python executable patterns
+    python_patterns = [
+        'python',        # Base python executable
+        'python.exe',    # Windows executable
+        'python3',       # Python 3.x
+        'python3.exe',   # Windows Python 3.x
+        'py',            # Python launcher (Windows)
+        'py.exe',        # Python launcher executable (Windows)
+    ]
+
+    # Check if filename matches any pattern
+    for pattern in python_patterns:
+        if filename == pattern:
+            return True
+        # Check for version numbers (e.g., python3.9, python3.10)
+        if pattern in ['python', 'python3'] and filename.startswith(pattern):
+            # Ensure the rest is a version number or valid extension
+            suffix = filename[len(pattern):]
+            if suffix.startswith('.') and (suffix[1:].isdigit() or suffix == '.exe'):
+                return True
+
+    return False
+
+
+
+
+def is_elf_file(filepath):
+    """
+    Check if a file is an ELF file by examining its magic number.
+    
+    Args:
+        filepath (str): Path to the file to check.
+        
+    Returns:
+        bool: True if the file is an ELF file, False otherwise.
+        
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        PermissionError: If the file cannot be accessed due to permissions.
+    """
+    elf_magic = b'\x7fELF'  # ELF magic number
+    
+    try:
+        with open(filepath, 'rb') as f:
+            # Read the first 4 bytes
+            header = f.read(4)
+            # Check if the header matches the ELF magic number
+            return header == elf_magic
+    except (FileNotFoundError, PermissionError) as e:
+        raise e
+    except Exception:
+        # Handle other potential errors (e.g., not a regular file)
+        return False
 
 def load_config_files():
     global config_path

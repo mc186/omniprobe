@@ -45,7 +45,22 @@ time_interval_handler_t::time_interval_handler_t(bool verbose)
       last_stop_(0),
       total_time_(0),
       no_intervals_(0),
-      verbose_(verbose) {}
+      verbose_(verbose) 
+{
+
+    const char* logDurLogFormat= std::getenv("LOGDUR_LOG_FORMAT");
+    if (logDurLogFormat)
+        format_ = logDurLogFormat;
+    else
+        format_= "csv";
+
+}
+
+time_interval_handler_t::~time_interval_handler_t()
+{
+    if(location_ != "console")
+        delete log_file_;
+}
 
   
 bool time_interval_handler_t::handle(const message_t &message, const std::string& kernel_name, kernelDB::kernelDB& kdb)
@@ -105,16 +120,18 @@ void time_interval_handler_t::report(const std::string& kernel_name, kernelDB::k
 }
 
 void time_interval_handler_t::report() {
-  if (no_intervals_ != 0) {
-    double average_time = (double)total_time_ / no_intervals_;
-    printf("time_interval report:\n");
-    printf("\ttotal time for all %zu intervals: %lu\n", no_intervals_, total_time_);
-    printf("\taverage time per interval: %.0f\n", average_time);
-    printf("\tfirst start: %lu\n", first_start_);
-    printf("\tlast stop: %lu\n", last_stop_);
-    printf("\ttime from first start to last stop: %lu"
-           "\t   (%f times the average interval time)\n",
-           last_stop_ - first_start_, (last_stop_ - first_start_) / average_time);
+    if (format_ != "json")
+    {
+      if (no_intervals_ != 0) {
+        double average_time = (double)total_time_ / no_intervals_;
+        *log_file_ << "time_interval report:\n";
+        *log_file_ << "\ttotal time for all " << no_intervals_ << " intervals: " << total_time_ << std::endl;
+        *log_file_ << "\taverage time per interval: " << average_time << std::endl;
+        *log_file_ << "\tfirst start: " << first_start_ << std::endl;
+        *log_file_ << "\tlast stop: " << last_stop_ << std::endl; 
+        *log_file_ << "\ttime from first start to last stop: " << last_stop_ - first_start_;
+        *log_file_ << "\t   (" << (last_stop_ - first_start_) / average_time << " times the average interval time)" << std::endl;
+      }
   }
 }
 

@@ -44,6 +44,12 @@ memory_heatmap_t::memory_heatmap_t(size_t page_size, bool verbose)
     : verbose_(verbose),
       page_size_(page_size) {}
 
+memory_heatmap_t::~memory_heatmap_t()
+{
+    if(location_ != "console")
+        delete log_file_;
+}
+
 bool memory_heatmap_t::handle(const message_t &message, const std::string& kernel_name, kernelDB::kernelDB& kdb) {
     // This if block is just to get the compiler to quick throwing errors for unused parameters
     if (kernel_name.length() == 0)
