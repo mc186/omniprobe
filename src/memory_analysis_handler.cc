@@ -172,13 +172,14 @@ memory_analysis_handler_t::memory_analysis_handler_t(bool verbose)
 }
 
 bool memory_analysis_handler_t::handle(const message_t &message) {
-  assert(message.data_item_size() == sizeof(uint64_t));
   if (message.wave_header().user_type != message_type::address) {
     if (verbose_) {
       printf("memory_analysis_handler: skipping message with user type 0x%x\n", message.wave_header().user_type);
     }
     return false;
   }
+  
+  assert(message.data_item_size() == sizeof(uint64_t));
 
   uint8_t mspace = (message.wave_header().user_data >> 2) & 0xf;
   switch (mspace) {
