@@ -1,6 +1,6 @@
 
 /******************************************************************************
-Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -114,6 +114,15 @@ typedef struct {
     uint64_t count_;
 }wave_state_t;
 
+struct resource_timestamp_t {
+	uint64_t timestamp;
+	uint32_t xcc_id;
+	uint32_t se_id; 
+	uint32_t cu_id;
+	workgroup_id_t wg_id;
+	uint32_t wave_num;
+};
+
 
 class basic_block_analysis : public dh_comms::message_handler_base
 {
@@ -150,5 +159,6 @@ private:
     std::string location_;
     std::ostream *log_file_;
     static std::atomic<bool> banner_displayed_;
-
+    std::vector<resource_timestamp_t> resource_timestamps_; // ADD: Track all resource-timestamp pairs
+							    //
 };

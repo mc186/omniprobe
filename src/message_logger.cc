@@ -1,6 +1,6 @@
 
 /******************************************************************************
-Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -51,7 +51,7 @@ message_logger_t::message_logger_t(const std::string& strKernel, uint64_t dispat
     }
 
     if (format_csv_)
-        *log_file_ << "ADDRESS_MESSAGE,timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,kind,address" << std::endl;
+	*log_file_ << "timestamp,kernel,src_line,dispatch,exec_mask,xcc_id,se_id,cu_id,kind" << std::endl;
 }
 
 message_logger_t::~message_logger_t()
@@ -77,7 +77,9 @@ bool message_logger_t::handle(const dh_comms::message_t &message, const std::str
             *log_file_ << json.getJSON() << std::endl;
             break;
     }
-    return true;
+    if (message.wave_header().user_type != dh_comms::message_type::address)
+        return false;
+    return handle(message);
 }
 
 bool message_logger_t::handle(const dh_comms::message_t &message)
@@ -92,27 +94,10 @@ bool message_logger_t::handle(const dh_comms::message_t &message)
         return false;
     }
     assert(message.data_item_size() == sizeof(uint64_t));
-
-
-    *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
-
-
+    *log_file_ << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
     *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
-    *log_file_ << (hdr.user_data & 0b11) << ",";
-    for (size_t i = 0; i != message.no_data_items(); ++i)
-    {
-        uint64_t address = *(const uint64_t *)message.data_item(i);
-        if (verbose_)
-        {
-            //printf("memory_heatmap: added address 0x%lx to map\n", address);
-        }
+    *log_file_ << (hdr.user_data & 0b11) << std::endl;
 
-        *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << address;
-        if (i < message.no_data_items() - 1)
-            *log_file_ << ",";
-        else
-            *log_file_ << std::endl;
-    }
     return true;
 }
     
@@ -131,34 +116,9 @@ bool message_logger_t::handle_address_message(const dh_comms::message_t& message
 
     if (format_csv_)
     {
-        *log_file_ << "ADDRESS_MESSAGE," << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
-
-
-        *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
-        *log_file_ << (hdr.user_data & 0b11) << ",";
-        for (size_t i = 0; i != message.no_data_items(); ++i)
-        {
-            uint64_t address = *(const uint64_t *)message.data_item(i);
-            if (verbose_)
-            {
-                //printf("memory_heatmap: added address 0x%lx to map\n", address);
-            }
-
-            *log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << address;
-            if (i < message.no_data_items() - 1)
-                *log_file_ << ",";
-            else
-                *log_file_ << std::endl;
-        }
-    }
-    else
-    {
-        std::vector<uint64_t> addrs;
-        for (size_t i = 0; i != message.no_data_items(); ++i)
-            addrs.push_back( *(const uint64_t *)message.data_item(i));
-        if (addrs.size())
-            json.addVector("addresses", addrs, false, false);
-
+	*log_file_ << std::dec << hdr.timestamp << ",\"" << strKernel_ << "\"," << hdr.dwarf_line << "," << dispatch_id_ << ",";
+	*log_file_ << "0x" << std::hex << std::setw(sizeof(void*) * 2) << std::setfill('0') << hdr.exec << "," << std::dec << hdr.xcc_id << "," << hdr.se_id << "," << hdr.cu_id << ",";
+    	*log_file_ << (hdr.user_data & 0b11) << std::endl;
     }
     return true;
 }
@@ -171,7 +131,7 @@ bool message_logger_t::handle_timeinterval_message(const dh_comms::message_t& me
 void message_logger_t::handle_header(const dh_comms::message_t& message, JSONHelper& json)
 {
     auto hdr = message.wave_header();
-    json.addField("exec", hdr.exec, false, false);
+    json.addField("exec", hdr.exec, false, true);
     json.addField("timestamp", hdr.timestamp);
     json.addField("dwarf_line", hdr.dwarf_line);
     json.addField("dwarf_column", hdr.dwarf_column);
@@ -183,28 +143,6 @@ void message_logger_t::handle_header(const dh_comms::message_t& message, JSONHel
     json.addField("se_id", ((uint16_t)hdr.se_id));
     json.addField("cu_id", ((uint16_t)hdr.cu_id));
     json.addField("active_lane_count", (uint16_t)hdr.active_lane_count);
-    json.addField("user_type", (uint16_t) hdr.user_type);
-
-    if(hdr.user_type == dh_comms::message_type::address)
-    {
-        switch(hdr.user_data & 0b11)
-        {
-            case dh_comms::memory_access::undefined:
-                json.addField("op_type", "\"undefined\"");
-                break;
-            case dh_comms::memory_access::read:
-                json.addField("op_type", "\"read\"");
-                break;
-            case dh_comms::memory_access::write:
-                json.addField("op_type", "\"write\"");
-                break;
-            case dh_comms::memory_access::read_write:
-                json.addField("op_type", "\"readwrite\"");
-                break;
-        }
-    }
-    else
-        json.addField("user_data", (uint16_t)hdr.user_data);
     return;
 }
 

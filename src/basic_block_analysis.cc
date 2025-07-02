@@ -1,5 +1,5 @@
 /******************************************************************************
-Copyright (c) 2025 Advanced Micro Devices, Inc. All rights reserved.
+Copyright (c) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@ THE SOFTWARE.
 #include <cassert>
 #include <set>
 #include "inc/basic_block_analysis.h"
-#include "inc/time_interval_handler.h"
+#include "time_interval_handler.h"
 #include <iomanip>
 #include <fstream>
 #include <cstdint>
@@ -157,6 +157,14 @@ std::string wave_identifier_to_string(waveIdentifier_t& wave)
 void basic_block_analysis::updateComputeResources(dh_comms::wave_header_t& hdr)
 {
     workgroup_id_t wg = {hdr.block_idx_x, hdr.block_idx_y, hdr.block_idx_z};
+    resource_timestamps_.push_back({
+		    hdr.timestamp,
+		    hdr.xcc_id,
+		    hdr.se_id,
+		    hdr.cu_id,
+		    wg,
+		    hdr.wave_num
+	    });
     auto it = compute_resources_.find(hdr.xcc_id);
     if (it != compute_resources_.end())
     {
@@ -338,8 +346,8 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
                 }
             }
         }
-        //else
-        //    std::cerr << "No instructions for block id " << block_idx << std::endl;
+        else
+            std::cerr << "No instructions for block id " << block_idx << std::endl;
     }
     catch (std::runtime_error e)
     {
@@ -347,6 +355,41 @@ bool basic_block_analysis::handle(const dh_comms::message_t &message, const std:
         return false;
     }
     return bReturn;
+}
+
+void outputResourceTimestamps()
+{
+	*log_file_ << "\n# Resource-Timestamp Mapping\n";
+	*log_file_ << "Timestamp,XCC,SE,CU,WG_X,WG_Y,WG_Z,Wave\n";			        
+	for (const auto& rt : resource_timestamps_)
+	{
+		*log_file_ << rt.timestamp << "," 
+			<< rt.xcc_id << "," 
+			<< rt.se_id << "," 
+			<< rt.cu_id << "," 
+			<< rt.wg_id.x << "," 
+			<< rt.wg_id.y << "," 
+			<< rt.wg_id.z << "," 
+			<< rt.wave_num << "\n";
+	}
+}
+
+void outputResourceTimestampsJSON()
+{
+	*log_file_ << "\"resource_timestamps\": [\n";
+	for (size_t i = 0; i < resource_timestamps_.size(); ++i)
+	{
+		const auto& rt = resource_timestamps_[i];
+		*log_file_ << "  {\"timestamp\": " << rt.timestamp 
+			<< ", \"xcc\": " << rt.xcc_id
+			<< ", \"se\": " << rt.se_id  
+			<< ", \"cu\": " << rt.cu_id
+			<< ", \"wg\": [" << rt.wg_id.x << "," << rt.wg_id.y << "," << rt.wg_id.z << "]"
+			<< ", \"wave\": " << rt.wave_num << "}";
+		if (i < resource_timestamps_.size() - 1) *log_file_ << ",";
+		*log_file_ << "\n";
+	}
+	*log_file_ << "]\n";
 }
 
 bool basic_block_analysis::handle(const dh_comms::message_t &message)
@@ -376,6 +419,20 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
     std::map<std::string, uint64_t> inst_counts;
     bool first_time = false, initialized = true;
     setupLogger();
+    // ADD: Output the resource-timestamp mapping
+    if (bFormatCsv)
+    {
+	    outputResourceTimestamps()
+    }
+    else
+    {
+	    *log_file_ << "{\n";
+	    *log_file_ << "\"kernel\": \"" << strKernel_ << "\",\n";
+	    *log_file_ << "\"dispatch\": " << dispatch_id_ << ",\n";
+	    outputResourceTimestampsJSON();
+	    *log_file_ << "}\n";
+    }
+
     renderComputeResources(*log_file_, "json");
     if (banner_displayed_.compare_exchange_strong(first_time, initialized))
         std::cerr << "omniprobe basic block analysis for kernel\n";
@@ -444,7 +501,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
             bigints.clear();
             doubles.clear();
             strings["kernel"] = strKernel_;
-            bigints["dispatch_id"] = dispatch_id_;
+            bigints["dispatch_d"] = dispatch_id_;
             doubles["kernel_branchiness"] = 1.0 - ( (double) ((double)thread_exec_count / ((double)block_exec_count * 64.0)));
             bigints["block_start_line"] = instructions[0].line_;
             bigints["block_end_line"] = instructions[instructions.size() - 1].line_;
@@ -485,10 +542,7 @@ void basic_block_analysis::report(const std::string& kernel_name, kernelDB::kern
         it++;
     }
     if (location_ != "console")
-    {
         delete log_file_;
-        log_file_ = nullptr;
-    }
 }
 
 void basic_block_analysis::report()
